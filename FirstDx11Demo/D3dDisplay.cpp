@@ -2,6 +2,9 @@
 #include "D3dDisplay.h"
 #include "Public.h"
 #include <xnamath.h>
+#include <D3DX11async.h>
+#include <D3Dcommon.h>
+#include <string.h>
 
 
 CD3dDisplay::CD3dDisplay(void):m_pD3d11Device(0),
@@ -122,9 +125,73 @@ void CD3dDisplay::DrawTriangle()
 {
     ID3D11Buffer* pVertexBuff = NULL;
     ID3D11InputLayout* pInputLayOut = NULL;
+	ID3D11VertexShader* pVs = NULL;
+	ID3D11PixelShader* pPs = NULL;
+	ID3DBlob* pVsBuff =  NULL;
+	HRESULT hr = S_OK;
+
+	XMFLOAT3 vertexPos[3] = 
+	{
+		XMFLOAT3(.0f, .0f, .0f),
+		XMFLOAT3(1.0f, .0f, .0f),
+		XMFLOAT3(.0f, 1.0f, .0f)
+	};
     
     D3D11_BUFFER_DESC bufferDesc;
     ZeroMemory(&bufferDesc, sizeof(D3D11_BUFFER_DESC));
-    bufferDesc.
-    m_pD3d11Device->CreateBuffer()
+    bufferDesc.ByteWidth = 3 * sizeof(XMFLOAT3);
+	bufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bufferDesc.CPUAccessFlags = 0;
+	bufferDesc.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA subresourceData;
+	ZeroMemory(&subresourceData, sizeof(D3D11_SUBRESOURCE_DATA));
+	subresourceData.pSysMem = vertexPos;
+    hr = m_pD3d11Device->CreateBuffer(&bufferDesc, &subresourceData, &pVertexBuff);
+
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	hr = D3DX11CompileFromFile( _T(""),
+								0, 
+								NULL,
+								"VS_Main",
+								"vs_4_0",
+								0,
+								0,
+								NULL,
+								&pVsBuff,
+								NULL,
+								NULL);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	hr = m_pD3d11Device->CreateVertexShader(pVsBuff->GetBufferPointer(), pVsBuff->GetBufferSize(), NULL, &pVs);
+	if (FAILED(hr))
+	{
+		return;
+	}
+	
+	D3D11_INPUT_ELEMENT_DESC inputElementDesc;
+	ZeroMemory(&inputElementDesc, sizeof(D3D11_INPUT_ELEMENT_DESC));
+	strcpy_s((char*)inputElementDesc.SemanticName, 20, "POSITION");
+	inputElementDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	inputElementDesc.AlignedByteOffset = 0;
+	inputElementDesc.InputSlot = 0;
+	inputElementDesc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	inputElementDesc.InstanceDataStepRate = 0;
+	inputElementDesc.SemanticIndex = 0;
+
+	hr = m_pD3d11Device->CreateInputLayout( &inputElementDesc, 1, pVsBuff->GetBufferPointer(), pVsBuff->GetBufferSize(), &pInputLayOut);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+
 }

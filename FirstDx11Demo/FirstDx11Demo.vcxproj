@@ -39,7 +39,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(VCInstallDir)PlatformSDK\include;$(IncludePath);$(DXSDK_DIR)Include</IncludePath>
+    <IncludePath>$(DXSDK_DIR)Include;$(VCInstallDir)PlatformSDK\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(VCInstallDir)PlatformSDK\lib;$(LibraryPath);$(DXSDK_DIR)Lib\x86</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
