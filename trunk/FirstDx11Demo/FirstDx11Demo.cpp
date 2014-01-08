@@ -50,6 +50,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
         if (msg.message != WM_QUIT)
         {
             g_D3dDisplay.ClearTargetView();  
+			g_D3dDisplay.DrawTriangle();
         }
 
 		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
