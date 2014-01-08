@@ -193,5 +193,13 @@ void CD3dDisplay::DrawTriangle()
 		return;
 	}
 
-
+	m_pD3d11DeviceContext->IASetInputLayout(pInputLayOut);
+	UINT dwStrides = sizeof(XMFLOAT3) * 3;
+	UINT dwOffsets = 0;
+	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &pVertexBuff, &dwStrides, &dwOffsets);
+	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_pD3d11DeviceContext->VSSetShader(pVs, 0, 0);
+	//m_pD3d11DeviceContext->PSSetShader();
+	m_pD3d11DeviceContext->Draw(3, 0);
+	m_pDXGISwapChain->Present(0, 0);
 }
