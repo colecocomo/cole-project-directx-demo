@@ -1,3 +1,7 @@
+#pragma once
+
+#include <xnamath.h>
+
 #ifndef SAFE_DELETE
 #define SAFE_DELETE( p ) \
     if( p )\
@@ -22,3 +26,9 @@ D3D_FEATURE_LEVEL g_featureLevel[] =
     D3D_FEATURE_LEVEL_10_0
 };
 unsigned int g_dwFeatureLevelSize = ARRAYSIZE(g_featureLevel);
+
+struct VertexFmt 
+{
+	XMFLOAT3 position;
+	XMFLOAT2 uv;
+};
