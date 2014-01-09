@@ -1,18 +1,29 @@
-/*
-    Beginning DirectX 11 Game Programming
-    By Allen Sherrod and Wendy Jones
+Texture2D colorMap : register(t0);
+SamplerState colorSampler : register(s0);
 
-    Solid Green Color Shader
-*/
-
-
-float4 VS_Main( float4 pos : POSITION ) : SV_POSITION
+struct VS_Input
 {
-    return pos;
+	float4 pos : POSITION;
+	float2 tex0 : TEXCOORD0;
+};
+
+struct PS_Input
+{
+	float4 pos : SV_POSITION;
+	float2 tex0 :  TEXCOORD0;
+};
+
+
+PS_Input VS_Main( VS_Input vertex )
+{
+	PS_Input vs_out;
+	vs_out.pos = vertex.pos;
+	vs_out.tex0 = vertex.tex0;
+    return vs_out;
 }
 
 
-float4 PS_Main( float4 pos : SV_POSITION ) : SV_TARGET
+float4 PS_Main( PS_Input frag ) : SV_TARGET
 {
-    return float4( 0.0f, 1.0f, 0.0f, 1.0f );
+    return colorMap.Sample(colorSampler, frag.tex0);
 }

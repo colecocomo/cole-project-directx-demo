@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="FX">
+      <UniqueIdentifier>{a560285e-78b5-45f1-b2cd-83aa97050e8e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
@@ -21,6 +24,9 @@
     </None>
     <None Include="FirstDx11Demo.ico">
       <Filter>Resource Files</Filter>
+    </None>
+    <None Include="FX\SolidGreenColor.fx">
+      <Filter>FX</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
