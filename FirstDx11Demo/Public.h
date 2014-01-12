@@ -11,6 +11,14 @@
     }
 #endif
 
+#ifndef SAFE_RELEASE
+#define SAFE_RELEASE( p ) \
+	if( p )\
+	{\
+	p->Release(); \
+	}
+#endif
+
 D3D_DRIVER_TYPE g_driveType[] = 
 {
     D3D_DRIVER_TYPE_HARDWARE,
