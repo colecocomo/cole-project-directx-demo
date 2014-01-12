@@ -48,9 +48,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
         if (msg.message != WM_QUIT)
-        {
-            g_D3dDisplay.ClearTargetView();  
-			g_D3dDisplay.DrawTriangle();
+        { 
+			g_D3dDisplay.DrawCube();
         }
 
 		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
@@ -126,7 +125,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
-   if (!g_D3dDisplay.InitDevice(hWnd))
+   if (!g_D3dDisplay.InitDevice3D(hWnd))
    {
        return FALSE;
    }
