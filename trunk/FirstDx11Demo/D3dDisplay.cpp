@@ -530,17 +530,17 @@ void CD3dDisplay::DrawCube()
 		return;
 	}
 
-	hr = D3DX11CompileFromFile( _T("FX/SolidGreenColor.fx"),
-		0, 
-		NULL,
-		"VS_Main",
-		"vs_4_0",
-		0,
-		0,
-		NULL,
-		&pVsBuff,
-		&pVsShaderError,
-		NULL);
+	hr = D3DX11CompileFromFile( _T("FX/Cube.fx"),
+								0, 
+								NULL,
+								"VS_Main",
+								"vs_4_0",
+								0,
+								0,
+								NULL,
+								&pVsBuff,
+								&pVsShaderError,
+								NULL);
 	if (FAILED(hr))
 	{
 		return;
@@ -552,17 +552,17 @@ void CD3dDisplay::DrawCube()
 		return;
 	}
 
-	hr = D3DX11CompileFromFile( _T("FX/SolidGreenColor.fx"),
-		0, 
-		NULL,
-		"PS_Main",
-		"ps_4_0",
-		0,
-		0,
-		NULL,
-		&pPsBuff,
-		&pPsShaderError,
-		NULL);
+	hr = D3DX11CompileFromFile( _T("FX/Cube.fx"),
+								0, 
+								NULL,
+								"PS_Main",
+								"ps_4_0",
+								0,
+								0,
+								NULL,
+								&pPsBuff,
+								&pPsShaderError,
+								NULL);
 	if (FAILED(hr))
 	{
 		void* pTmp = pPsShaderError->GetBufferPointer();
@@ -599,11 +599,11 @@ void CD3dDisplay::DrawCube()
 	}
 
 	hr = D3DX11CreateShaderResourceViewFromFile( m_pD3d11Device,
-		_T("RES/decal.dds"),
-		NULL,
-		NULL,
-		&pShaderResView,
-		NULL);
+												_T("RES/decal.dds"),
+												NULL,
+												NULL,
+												&pShaderResView,
+												NULL);
 	if (FAILED(hr))
 	{
 		return;
@@ -627,9 +627,17 @@ void CD3dDisplay::DrawCube()
 	ZeroMemory(&viewMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&projMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&worldMatrix, sizeof(XMMATRIX));
+	FXMVECTOR eyePos = XMVectorSet(1.0f, 1.0f, -1.0f, 1.0f);
+	FXMVECTOR lookPos = XMVectorSet(.0f, .0f, .0f, 1.0f);
+	FXMVECTOR upDir = XMVectorSet(.0f, 1.0f, .0f, .0f);
+
+	//viewMatrix = XMMatrixLookAtLH(eyePos, lookPos, upDir);
 	viewMatrix = XMMatrixIdentity();
+	//viewMatrix = XMMatrixTranspose(viewMatrix);
 	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
-	worldMatrix = XMMatrixTranslation(.0f, .0f, .0f);
+	//projMatrix = XMMatrixTranspose(projMatrix);
+	worldMatrix = XMMatrixTranslation(1.0f, 1.0f, 2.0f);
+	//worldMatrix = XMMatrixTranspose(worldMatrix);
 
 	ID3D11Buffer* pViewMatrixCB = NULL;
 	ID3D11Buffer* pProjMatrixCB = NULL;
@@ -637,7 +645,32 @@ void CD3dDisplay::DrawCube()
 
 	D3D11_BUFFER_DESC buffDesc;
 	ZeroMemory(&buffDesc, sizeof(D3D11_BUFFER_DESC));
-	//buffDesc.BindFlags =
+	buffDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	buffDesc.ByteWidth = sizeof(XMMATRIX);
+	buffDesc.Usage = D3D11_USAGE_DEFAULT;
+	hr = m_pD3d11Device->CreateBuffer(&buffDesc, NULL, &pViewMatrixCB);
+	if (FAILED(hr))
+	{
+		return;
+	}
+	hr = m_pD3d11Device->CreateBuffer(&buffDesc, NULL, &pProjMatrixCB);
+	if (FAILED(hr))
+	{
+		return;
+	}
+	hr = m_pD3d11Device->CreateBuffer(&buffDesc, NULL, &pworldMatrixCB);
+	if (FAILED(hr))
+	{
+		return;
+	}
+	
+	m_pD3d11DeviceContext->UpdateSubresource(pViewMatrixCB, 0, 0, reinterpret_cast<void*> (&viewMatrix), 0, 0 );
+	m_pD3d11DeviceContext->UpdateSubresource(pProjMatrixCB, 0, 0, reinterpret_cast<void*> (&projMatrix), 0, 0 );
+	m_pD3d11DeviceContext->UpdateSubresource(pworldMatrixCB, 0, 0, reinterpret_cast<void*> (&worldMatrix), 0, 0 );
+
+	m_pD3d11DeviceContext->VSSetConstantBuffers(0, 1, &pViewMatrixCB);
+	m_pD3d11DeviceContext->VSSetConstantBuffers(1, 1, &pProjMatrixCB);
+	m_pD3d11DeviceContext->VSSetConstantBuffers(2, 1, &pworldMatrixCB);
 
 	m_pD3d11DeviceContext->IASetInputLayout(pInputLayOut);
 	UINT dwStrides = sizeof(VertexFmt);

@@ -79,6 +79,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="FirstDx11Demo.ico" />
+    <None Include="FX\Cube.fx" />
     <None Include="FX\SolidGreenColor.fx" />
     <None Include="ReadMe.txt" />
     <None Include="small.ico" />
