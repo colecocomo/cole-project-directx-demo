@@ -50,6 +50,7 @@ CD3dDisplay::~CD3dDisplay(void)
 bool CD3dDisplay::InitDevice3D(HWND hWnd)
 {
 	HRESULT hr = S_OK;
+	ID3D11DepthStencilState* pDepthStencilState = NULL;
     RECT cltRect;
 
     ZeroMemory(&cltRect, sizeof(RECT));
@@ -163,6 +164,31 @@ bool CD3dDisplay::InitDevice3D(HWND hWnd)
 	}
 
 	m_pD3d11DeviceContext->OMSetRenderTargets(1, &m_pRenderTargetView, pDepthStencilView);
+
+
+	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
+	ZeroMemory(&depthStencilDesc, sizeof(D3D11_DEPTH_STENCIL_DESC));
+	depthStencilDesc.DepthEnable = TRUE;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_GREATER;
+	depthStencilDesc.StencilEnable = TRUE;
+	depthStencilDesc.StencilReadMask = 0xff;
+	depthStencilDesc.StencilWriteMask =  0xff;
+	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	hr = m_pD3d11Device->CreateDepthStencilState(&depthStencilDesc, &pDepthStencilState);
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
+	m_pD3d11DeviceContext->OMSetDepthStencilState(pDepthStencilState, 1);
 
     return true;
 }
@@ -448,6 +474,7 @@ void CD3dDisplay::DrawSprite()
 void CD3dDisplay::DrawCube()
 {
 	ID3D11Buffer* pVertexBuff = NULL;
+	ID3D11Buffer* pIndexBuff = NULL;
 	ID3D11InputLayout* pInputLayOut = NULL;
 	ID3D11VertexShader* pVs = NULL;
 	ID3D11PixelShader* pPs = NULL;
@@ -459,58 +486,102 @@ void CD3dDisplay::DrawCube()
 	ID3D11SamplerState* pSamplerState = NULL;
 	HRESULT hr = S_OK;
 
-	VertexFmt vertexPos[] = 
+	VertexFmt vertexPos[] =
 	{
-		{XMFLOAT3(-1.0f, 1.0f, .0f), XMFLOAT2(.0f, .0f)},
-		{XMFLOAT3(1.0f, 1.0f, .0f), XMFLOAT2(1.0f, 0.0f)},
-		{XMFLOAT3(-1.0f, -1.0f, .0f), XMFLOAT2(0.0f, 1.0f)},
+		{ XMFLOAT3( -1.0f,  1.0f, -1.0f ), XMFLOAT2( 0.0f, 0.0f ) },
+		{ XMFLOAT3(  1.0f,  1.0f, -1.0f ), XMFLOAT2( 1.0f, 0.0f ) },
+		{ XMFLOAT3(  1.0f,  1.0f,  1.0f ), XMFLOAT2( 1.0f, 1.0f ) },
+		{ XMFLOAT3( -1.0f,  1.0f,  1.0f ), XMFLOAT2( 0.0f, 1.0f ) },
 
-		{XMFLOAT3(-1.0f, -1.0f, .0f), XMFLOAT2(.0f, 1.0f)},
-		{XMFLOAT3(1.0f, 1.0f, .0f), XMFLOAT2(1.0f, 0.0f)},
-		{XMFLOAT3(1.0f, -1.0f, .0f), XMFLOAT2(1.0f, 1.0f)},
+		{ XMFLOAT3( -1.0f, -1.0f, -1.0f ), XMFLOAT2( 0.0f, 0.0f ) },
+		{ XMFLOAT3(  1.0f, -1.0f, -1.0f ), XMFLOAT2( 1.0f, 0.0f ) },
+		{ XMFLOAT3(  1.0f, -1.0f,  1.0f ), XMFLOAT2( 1.0f, 1.0f ) },
+		{ XMFLOAT3( -1.0f, -1.0f,  1.0f ), XMFLOAT2( 0.0f, 1.0f ) },
 
-		{XMFLOAT3(1.0f, 1.0f, .0f), XMFLOAT2(1.0f, 0.0f)},
-		{XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f)},
-		{XMFLOAT3(1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)},
+		{ XMFLOAT3( -1.0f, -1.0f,  1.0f ), XMFLOAT2( 0.0f, 0.0f ) },
+		{ XMFLOAT3( -1.0f, -1.0f, -1.0f ), XMFLOAT2( 1.0f, 0.0f ) },
+		{ XMFLOAT3( -1.0f,  1.0f, -1.0f ), XMFLOAT2( 1.0f, 1.0f ) },
+		{ XMFLOAT3( -1.0f,  1.0f,  1.0f ), XMFLOAT2( 0.0f, 1.0f ) },
 
-		{XMFLOAT3(1.0f, 1.0f, .0f), XMFLOAT2(1.0f, 0.0f)},
-		{XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f)},
-		{XMFLOAT3(1.0f, -1.0f,0.0f), XMFLOAT2(1.0f, 1.0f)},
+		{ XMFLOAT3(  1.0f, -1.0f,  1.0f ), XMFLOAT2( 0.0f, 0.0f ) },
+		{ XMFLOAT3(  1.0f, -1.0f, -1.0f ), XMFLOAT2( 1.0f, 0.0f ) },
+		{ XMFLOAT3(  1.0f,  1.0f, -1.0f ), XMFLOAT2( 1.0f, 1.0f ) },
+		{ XMFLOAT3(  1.0f,  1.0f,  1.0f ), XMFLOAT2( 0.0f, 1.0f ) },
 
-		{XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f)},
-		{XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f)},
-		{XMFLOAT3(1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)},
+		{ XMFLOAT3( -1.0f, -1.0f, -1.0f ), XMFLOAT2( 0.0f, 0.0f ) },
+		{ XMFLOAT3(  1.0f, -1.0f, -1.0f ), XMFLOAT2( 1.0f, 0.0f ) },
+		{ XMFLOAT3(  1.0f,  1.0f, -1.0f ), XMFLOAT2( 1.0f, 1.0f ) },
+		{ XMFLOAT3( -1.0f,  1.0f, -1.0f ), XMFLOAT2( 0.0f, 1.0f ) },
 
-		{XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f)},
-		{XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f)},
-		{XMFLOAT3(-1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)},
-
-		{XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f)},
-		{XMFLOAT3(-1.0f, 1.0f, 0.0f), XMFLOAT2(1.0f, 1.0f)},
-		{XMFLOAT3(-1.0f, -1.0f,0.0f), XMFLOAT2(1.0f, 1.0f)},
-
-		{XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f)},
-		{XMFLOAT3(-1.0f, -1.0f, 0.0f), XMFLOAT2(1.0f, 1.0f)},
-		{XMFLOAT3(-1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)},
-
-		{XMFLOAT3(-1.0f, 1.0f, 0.0f), XMFLOAT2(1.0f, 0.0f)},
-		{XMFLOAT3(1.0f, 1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)},
-		{XMFLOAT3(1.0f, 1.0f, 0.0f), XMFLOAT2(1.0f, 1.0f)},
-
-		{XMFLOAT3(-1.0f, 1.0f, .0f), XMFLOAT2(1.0f, 0.0f)},
-		{XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f)},
-		{XMFLOAT3(1.0f, 1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)},
-
-		{XMFLOAT3(-1.0f, -1.0f, 0.0f), XMFLOAT2(1.0f, 0.0f)},
-		{XMFLOAT3(1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)},
-		{XMFLOAT3(1.0f, -1.0f, 0.0f), XMFLOAT2(1.0f, 1.0f)},
-
-		{XMFLOAT3(-1.0f, -1.0f, .0f), XMFLOAT2(1.0f, 0.0f)},
-		{XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f)},
-		{XMFLOAT3(1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)}
+		{ XMFLOAT3( -1.0f, -1.0f,  1.0f ), XMFLOAT2( 0.0f, 0.0f ) },
+		{ XMFLOAT3(  1.0f, -1.0f,  1.0f ), XMFLOAT2( 1.0f, 0.0f ) },
+		{ XMFLOAT3(  1.0f,  1.0f,  1.0f ), XMFLOAT2( 1.0f, 1.0f ) },
+		{ XMFLOAT3( -1.0f,  1.0f,  1.0f ), XMFLOAT2( 0.0f, 1.0f ) }
 	};
 
+	WORD indices[] =
+	{
+		3,   1,  0,  2,  1,  3,
+		6,   4,  5,  7,  4,  6,
+		11,  9,  8, 10,  9, 11
+		//14, 12, 13, 15, 12, 14,
+		//19, 17, 16, 18, 17, 19,
+		//22, 20, 21, 23, 20, 22
+	};
+
+	/*VertexFmt vertexPos[] = 
+	{
+	{XMFLOAT3(-1.0f, 1.0f, .0f), XMFLOAT2(.0f, .0f)},
+	{XMFLOAT3(1.0f, 1.0f, .0f), XMFLOAT2(1.0f, 0.0f)},
+	{XMFLOAT3(-1.0f, -1.0f, .0f), XMFLOAT2(0.0f, 1.0f)},
+
+	{XMFLOAT3(-1.0f, -1.0f, .0f), XMFLOAT2(.0f, 1.0f)},
+	{XMFLOAT3(1.0f, 1.0f, .0f), XMFLOAT2(1.0f, 0.0f)},
+	{XMFLOAT3(1.0f, -1.0f, .0f), XMFLOAT2(1.0f, 1.0f)},
+
+	{XMFLOAT3(1.0f, 1.0f, .0f), XMFLOAT2(.0f, .0f)},
+	{XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f)},
+	{XMFLOAT3(1.0f, -1.0f,1.0f), XMFLOAT2(.0f, 1.0f)},
+
+	{XMFLOAT3(1.0f, 1.0f, .0f), XMFLOAT2(0.0f, 1.0f)},
+	{XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f)},
+	{XMFLOAT3(1.0f, -1.0f,0.0f), XMFLOAT2(1.0f, 1.0f)},
+
+	{XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(.0f, .0f)},
+	{XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, .0f)},
+	{XMFLOAT3(1.0f, -1.0f,1.0f), XMFLOAT2(.0f, 1.0f)},
+
+	{XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT2(.0f, 1.0f)},
+	{XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, .0f)},
+	{XMFLOAT3(-1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)},
+
+	{XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(.0f, 0.0f)},
+	{XMFLOAT3(-1.0f, 1.0f, 0.0f), XMFLOAT2(1.0f, .0f)},
+	{XMFLOAT3(-1.0f, -1.0f,0.0f), XMFLOAT2(.0f, 1.0f)},
+
+	{XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT2(.0f, 1.0f)},
+	{XMFLOAT3(-1.0f, -1.0f, 0.0f), XMFLOAT2(1.0f, .0f)},
+	{XMFLOAT3(-1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)},
+
+	{XMFLOAT3(-1.0f, 1.0f, 0.0f), XMFLOAT2(.0f, 0.0f)},
+	{XMFLOAT3(1.0f, 1.0f,1.0f), XMFLOAT2(1.0f, .0f)},
+	{XMFLOAT3(1.0f, 1.0f, 0.0f), XMFLOAT2(.0f, 1.0f)},
+
+	{XMFLOAT3(-1.0f, 1.0f, .0f), XMFLOAT2(.0f, 1.0f)},
+	{XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, .0f)},
+	{XMFLOAT3(1.0f, 1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)},
+
+	{XMFLOAT3(-1.0f, -1.0f, 0.0f), XMFLOAT2(.0f, 0.0f)},
+	{XMFLOAT3(1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, .0f)},
+	{XMFLOAT3(1.0f, -1.0f, 0.0f), XMFLOAT2(.0f, 1.0f)},
+
+	{XMFLOAT3(-1.0f, -1.0f, .0f), XMFLOAT2(.0f, 1.0f)},
+	{XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, .0f)},
+	{XMFLOAT3(1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)}
+	};*/
+
 	UINT vertexSize = ARRAYSIZE(vertexPos);
+	UINT indexSize = ARRAYSIZE(indices);
 
 	D3D11_BUFFER_DESC bufferDesc;
 	ZeroMemory(&bufferDesc, sizeof(D3D11_BUFFER_DESC));
@@ -529,6 +600,24 @@ void CD3dDisplay::DrawCube()
 	{
 		return;
 	}
+
+	D3D11_BUFFER_DESC indexBufferDesc;
+	ZeroMemory(&indexBufferDesc, sizeof(D3D11_BUFFER_DESC));
+	indexBufferDesc.ByteWidth = indexSize * sizeof(WORD);
+	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	indexBufferDesc.CPUAccessFlags = 0;
+	indexBufferDesc.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA subresourceIndexData;
+	ZeroMemory(&subresourceIndexData, sizeof(D3D11_SUBRESOURCE_DATA));
+	subresourceIndexData.pSysMem = indices;
+	hr = m_pD3d11Device->CreateBuffer(&indexBufferDesc, &subresourceIndexData, &pIndexBuff);
+
+	if (FAILED(hr))
+	{
+		return;
+	}	
 
 	hr = D3DX11CompileFromFile( _T("FX/Cube.fx"),
 								0, 
@@ -633,11 +722,12 @@ void CD3dDisplay::DrawCube()
 
 	//viewMatrix = XMMatrixLookAtLH(eyePos, lookPos, upDir);
 	viewMatrix = XMMatrixIdentity();
-	//viewMatrix = XMMatrixTranspose(viewMatrix);
+	viewMatrix = XMMatrixTranspose(viewMatrix);
 	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
-	//projMatrix = XMMatrixTranspose(projMatrix);
-	worldMatrix = XMMatrixTranslation(1.0f, 1.0f, 2.0f);
-	//worldMatrix = XMMatrixTranspose(worldMatrix);
+	projMatrix = XMMatrixTranspose(projMatrix);
+	worldMatrix = XMMatrixRotationRollPitchYaw(.0f, .0f, .0f);
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, 0.0f, 5.0f));
+	worldMatrix = XMMatrixTranspose(worldMatrix);
 
 	ID3D11Buffer* pViewMatrixCB = NULL;
 	ID3D11Buffer* pProjMatrixCB = NULL;
@@ -676,7 +766,8 @@ void CD3dDisplay::DrawCube()
 	UINT dwStrides = sizeof(VertexFmt);
 	UINT dwOffsets = 0;
 	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &pVertexBuff, &dwStrides, &dwOffsets);
-	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_pD3d11DeviceContext->IASetIndexBuffer(pIndexBuff, DXGI_FORMAT_R16_UINT, 0);
+	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	m_pD3d11DeviceContext->VSSetShader(pVs, 0, 0);
 	m_pD3d11DeviceContext->PSSetShader(pPs, 0, 0);
 	m_pD3d11DeviceContext->PSSetShaderResources(0, 1, &pShaderResView);
