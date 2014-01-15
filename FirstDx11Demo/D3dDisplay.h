@@ -21,6 +21,7 @@ private:
     ID3D11DeviceContext*            m_pD3d11DeviceContext;
     IDXGISwapChain*                 m_pDXGISwapChain;
 	ID3D11RenderTargetView*			m_pRenderTargetView;
+	ID3D11DepthStencilView*			m_pDepthStencilView;
 
     D3D_FEATURE_LEVEL               m_nD3DFeatureLevel;
     D3D_DRIVER_TYPE                 m_nD3DDriveType;
