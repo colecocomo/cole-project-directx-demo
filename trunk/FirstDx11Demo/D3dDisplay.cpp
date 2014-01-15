@@ -11,6 +11,7 @@ CD3dDisplay::CD3dDisplay(void):m_pD3d11Device(0),
 m_pD3d11DeviceContext(0),
 m_pDXGISwapChain(0),
 m_pRenderTargetView(0),
+m_pDepthStencilView(0),
 m_nD3DFeatureLevel(D3D_FEATURE_LEVEL_11_0),
 m_nD3DDriveType(D3D_DRIVER_TYPE_UNKNOWN),
 m_pVertexBuff(0),
@@ -136,14 +137,14 @@ bool CD3dDisplay::InitDevice3D(HWND hWnd)
 	{
 		return false;
 	}
-	ID3D11DepthStencilView* pDepthStencilView = NULL; 
+	//ID3D11DepthStencilView* pDepthStencilView = NULL; 
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
 	ZeroMemory(&depthStencilViewDesc, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
 	depthStencilViewDesc.Format = textureDesc.Format;
 	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	depthStencilViewDesc.Texture2D.MipSlice = 0;
-	hr = m_pD3d11Device->CreateDepthStencilView(pDSVTexture, &depthStencilViewDesc, &pDepthStencilView);
+	hr = m_pD3d11Device->CreateDepthStencilView(pDSVTexture, &depthStencilViewDesc, &m_pDepthStencilView);
 	if (FAILED(hr))
 	{
 		return false;
@@ -163,14 +164,14 @@ bool CD3dDisplay::InitDevice3D(HWND hWnd)
 		return false;
 	}
 
-	m_pD3d11DeviceContext->OMSetRenderTargets(1, &m_pRenderTargetView, pDepthStencilView);
+	m_pD3d11DeviceContext->OMSetRenderTargets(1, &m_pRenderTargetView, m_pDepthStencilView);
 
 
 	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
 	ZeroMemory(&depthStencilDesc, sizeof(D3D11_DEPTH_STENCIL_DESC));
 	depthStencilDesc.DepthEnable = TRUE;
 	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_GREATER;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
 	depthStencilDesc.StencilEnable = TRUE;
 	depthStencilDesc.StencilReadMask = 0xff;
 	depthStencilDesc.StencilWriteMask =  0xff;
@@ -523,10 +524,10 @@ void CD3dDisplay::DrawCube()
 	{
 		3,   1,  0,  2,  1,  3,
 		6,   4,  5,  7,  4,  6,
-		11,  9,  8, 10,  9, 11
-		//14, 12, 13, 15, 12, 14,
-		//19, 17, 16, 18, 17, 19,
-		//22, 20, 21, 23, 20, 22
+		11,  9,  8, 10,  9, 11,
+		14, 12, 13, 15, 12, 14,
+		19, 17, 16, 18, 17, 19,
+		22, 20, 21, 23, 20, 22
 	};
 
 	/*VertexFmt vertexPos[] = 
@@ -725,8 +726,8 @@ void CD3dDisplay::DrawCube()
 	viewMatrix = XMMatrixTranspose(viewMatrix);
 	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
 	projMatrix = XMMatrixTranspose(projMatrix);
-	worldMatrix = XMMatrixRotationRollPitchYaw(.0f, .0f, .0f);
-	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, 0.0f, 5.0f));
+	worldMatrix = XMMatrixRotationRollPitchYaw(.0f, .7f, .7f);
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, 0.0f, 10.0f));
 	worldMatrix = XMMatrixTranspose(worldMatrix);
 
 	ID3D11Buffer* pViewMatrixCB = NULL;
@@ -758,6 +759,8 @@ void CD3dDisplay::DrawCube()
 	m_pD3d11DeviceContext->UpdateSubresource(pProjMatrixCB, 0, 0, reinterpret_cast<void*> (&projMatrix), 0, 0 );
 	m_pD3d11DeviceContext->UpdateSubresource(pworldMatrixCB, 0, 0, reinterpret_cast<void*> (&worldMatrix), 0, 0 );
 
+	m_pD3d11DeviceContext->ClearDepthStencilView( m_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0 );
+
 	m_pD3d11DeviceContext->VSSetConstantBuffers(0, 1, &pViewMatrixCB);
 	m_pD3d11DeviceContext->VSSetConstantBuffers(1, 1, &pProjMatrixCB);
 	m_pD3d11DeviceContext->VSSetConstantBuffers(2, 1, &pworldMatrixCB);
@@ -767,7 +770,7 @@ void CD3dDisplay::DrawCube()
 	UINT dwOffsets = 0;
 	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &pVertexBuff, &dwStrides, &dwOffsets);
 	m_pD3d11DeviceContext->IASetIndexBuffer(pIndexBuff, DXGI_FORMAT_R16_UINT, 0);
-	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_pD3d11DeviceContext->VSSetShader(pVs, 0, 0);
 	m_pD3d11DeviceContext->PSSetShader(pPs, 0, 0);
 	m_pD3d11DeviceContext->PSSetShaderResources(0, 1, &pShaderResView);
@@ -782,6 +785,6 @@ void CD3dDisplay::DrawCube()
 	vp.MaxDepth = 1.0f;
 	m_pD3d11DeviceContext->RSSetViewports(1, &vp);
 
-	m_pD3d11DeviceContext->Draw(vertexSize, 0);
+	m_pD3d11DeviceContext->DrawIndexed(indexSize, 0, 0);
 	m_pDXGISwapChain->Present(0, 0);
 }
