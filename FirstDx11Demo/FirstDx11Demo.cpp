@@ -49,7 +49,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	{
         if (msg.message != WM_QUIT)
         { 
-			g_D3dDisplay.DrawCube();
+			g_D3dDisplay.Effect();
         }
 
 		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
