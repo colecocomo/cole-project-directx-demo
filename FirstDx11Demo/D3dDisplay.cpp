@@ -750,7 +750,7 @@ void CD3dDisplay::DrawCube()
 	//viewMatrix = XMMatrixLookAtLH(eyePos, lookPos, upDir);
 	viewMatrix = XMMatrixIdentity();
 	viewMatrix = XMMatrixTranspose(viewMatrix);
-	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
+	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
 	projMatrix = XMMatrixTranspose(projMatrix);
 	worldMatrix = XMMatrixRotationRollPitchYaw(.0f, .7f, .7f);
 	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, 0.0f, 10.0f));
@@ -873,57 +873,6 @@ void CD3dDisplay::Effect()
 		22, 20, 21, 23, 20, 22
 	};
 
-	/*VertexFmt vertexPos[] = 
-	{
-	{XMFLOAT3(-1.0f, 1.0f, .0f), XMFLOAT2(.0f, .0f)},
-	{XMFLOAT3(1.0f, 1.0f, .0f), XMFLOAT2(1.0f, 0.0f)},
-	{XMFLOAT3(-1.0f, -1.0f, .0f), XMFLOAT2(0.0f, 1.0f)},
-
-	{XMFLOAT3(-1.0f, -1.0f, .0f), XMFLOAT2(.0f, 1.0f)},
-	{XMFLOAT3(1.0f, 1.0f, .0f), XMFLOAT2(1.0f, 0.0f)},
-	{XMFLOAT3(1.0f, -1.0f, .0f), XMFLOAT2(1.0f, 1.0f)},
-
-	{XMFLOAT3(1.0f, 1.0f, .0f), XMFLOAT2(.0f, .0f)},
-	{XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f)},
-	{XMFLOAT3(1.0f, -1.0f,1.0f), XMFLOAT2(.0f, 1.0f)},
-
-	{XMFLOAT3(1.0f, 1.0f, .0f), XMFLOAT2(0.0f, 1.0f)},
-	{XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f)},
-	{XMFLOAT3(1.0f, -1.0f,0.0f), XMFLOAT2(1.0f, 1.0f)},
-
-	{XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(.0f, .0f)},
-	{XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, .0f)},
-	{XMFLOAT3(1.0f, -1.0f,1.0f), XMFLOAT2(.0f, 1.0f)},
-
-	{XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT2(.0f, 1.0f)},
-	{XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, .0f)},
-	{XMFLOAT3(-1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)},
-
-	{XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(.0f, 0.0f)},
-	{XMFLOAT3(-1.0f, 1.0f, 0.0f), XMFLOAT2(1.0f, .0f)},
-	{XMFLOAT3(-1.0f, -1.0f,0.0f), XMFLOAT2(.0f, 1.0f)},
-
-	{XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT2(.0f, 1.0f)},
-	{XMFLOAT3(-1.0f, -1.0f, 0.0f), XMFLOAT2(1.0f, .0f)},
-	{XMFLOAT3(-1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)},
-
-	{XMFLOAT3(-1.0f, 1.0f, 0.0f), XMFLOAT2(.0f, 0.0f)},
-	{XMFLOAT3(1.0f, 1.0f,1.0f), XMFLOAT2(1.0f, .0f)},
-	{XMFLOAT3(1.0f, 1.0f, 0.0f), XMFLOAT2(.0f, 1.0f)},
-
-	{XMFLOAT3(-1.0f, 1.0f, .0f), XMFLOAT2(.0f, 1.0f)},
-	{XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, .0f)},
-	{XMFLOAT3(1.0f, 1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)},
-
-	{XMFLOAT3(-1.0f, -1.0f, 0.0f), XMFLOAT2(.0f, 0.0f)},
-	{XMFLOAT3(1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, .0f)},
-	{XMFLOAT3(1.0f, -1.0f, 0.0f), XMFLOAT2(.0f, 1.0f)},
-
-	{XMFLOAT3(-1.0f, -1.0f, .0f), XMFLOAT2(.0f, 1.0f)},
-	{XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, .0f)},
-	{XMFLOAT3(1.0f, -1.0f,1.0f), XMFLOAT2(1.0f, 1.0f)}
-	};*/
-
 	UINT vertexSize = ARRAYSIZE(vertexPos);
 	UINT indexSize = ARRAYSIZE(indices);
 
@@ -968,13 +917,9 @@ void CD3dDisplay::Effect()
 	if (pEffectTechnique)
 	{
 		pEffectPass = pEffectTechnique->GetPassByName("P0");
-		if (pEffectPass)
+		if (!pEffectPass)
 		{
-			hr = pEffectPass->Apply(0, m_pD3d11DeviceContext);
-			if (FAILED(hr))
-			{
-				return;
-			}
+			return;
 		}
 	}
 
@@ -982,7 +927,8 @@ void CD3dDisplay::Effect()
 	D3DX11_PASS_SHADER_DESC passShaderDesc;
 	ZeroMemory(&effectShaderDesc, sizeof(D3DX11_EFFECT_SHADER_DESC));
 	ZeroMemory(&passShaderDesc, sizeof(D3DX11_PASS_SHADER_DESC));
-	
+	pEffectPass->GetVertexShaderDesc(&passShaderDesc);
+	passShaderDesc.pShaderVariable->GetShaderDesc(0, &effectShaderDesc);
 
 	D3D11_INPUT_ELEMENT_DESC inputElementDesc[2];
 	ZeroMemory(inputElementDesc, sizeof(inputElementDesc));
@@ -1001,7 +947,7 @@ void CD3dDisplay::Effect()
 	inputElementDesc[1].InstanceDataStepRate = 0;
 	inputElementDesc[1].SemanticIndex = 0;
 
-	hr = m_pD3d11Device->CreateInputLayout( inputElementDesc, 2, pVsBuff->GetBufferPointer(), pVsBuff->GetBufferSize(), &pInputLayOut);
+	hr = m_pD3d11Device->CreateInputLayout( inputElementDesc, 2, effectShaderDesc.pBytecode, effectShaderDesc.BytecodeLength, &pInputLayOut);
 	if (FAILED(hr))
 	{
 		return;
@@ -1043,46 +989,48 @@ void CD3dDisplay::Effect()
 	//viewMatrix = XMMatrixLookAtLH(eyePos, lookPos, upDir);
 	viewMatrix = XMMatrixIdentity();
 	viewMatrix = XMMatrixTranspose(viewMatrix);
-	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
+	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)(m_dwWidth/m_dwHeight), 0.01f, 1000.0f);
 	projMatrix = XMMatrixTranspose(projMatrix);
 	worldMatrix = XMMatrixRotationRollPitchYaw(.0f, .7f, .7f);
-	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, 0.0f, 10.0f));
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, 0.0f, 1.0f));
 	worldMatrix = XMMatrixTranspose(worldMatrix);
-
-	ID3D11Buffer* pViewMatrixCB = NULL;
-	ID3D11Buffer* pProjMatrixCB = NULL;
-	ID3D11Buffer* pworldMatrixCB = NULL;
-
-	D3D11_BUFFER_DESC buffDesc;
-	ZeroMemory(&buffDesc, sizeof(D3D11_BUFFER_DESC));
-	buffDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	buffDesc.ByteWidth = sizeof(XMMATRIX);
-	buffDesc.Usage = D3D11_USAGE_DEFAULT;
-	hr = m_pD3d11Device->CreateBuffer(&buffDesc, NULL, &pViewMatrixCB);
-	if (FAILED(hr))
-	{
-		return;
-	}
-	hr = m_pD3d11Device->CreateBuffer(&buffDesc, NULL, &pProjMatrixCB);
-	if (FAILED(hr))
-	{
-		return;
-	}
-	hr = m_pD3d11Device->CreateBuffer(&buffDesc, NULL, &pworldMatrixCB);
-	if (FAILED(hr))
-	{
-		return;
-	}
 	
-	m_pD3d11DeviceContext->UpdateSubresource(pViewMatrixCB, 0, 0, reinterpret_cast<void*> (&viewMatrix), 0, 0 );
-	m_pD3d11DeviceContext->UpdateSubresource(pProjMatrixCB, 0, 0, reinterpret_cast<void*> (&projMatrix), 0, 0 );
-	m_pD3d11DeviceContext->UpdateSubresource(pworldMatrixCB, 0, 0, reinterpret_cast<void*> (&worldMatrix), 0, 0 );
-
 	m_pD3d11DeviceContext->ClearDepthStencilView( m_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0 );
 
-	m_pD3d11DeviceContext->VSSetConstantBuffers(0, 1, &pViewMatrixCB);
-	m_pD3d11DeviceContext->VSSetConstantBuffers(1, 1, &pProjMatrixCB);
-	m_pD3d11DeviceContext->VSSetConstantBuffers(2, 1, &pworldMatrixCB);
+	ID3DX11EffectMatrixVariable* pMatrix =  m_pEffect->GetVariableByName("viewMatrix")->AsMatrix();
+	if (!pMatrix)
+	{
+		return;
+	}
+	pMatrix->SetMatrix((float*)&viewMatrix);
+
+	pMatrix = m_pEffect->GetVariableByName("projMatrix")->AsMatrix();
+	if (!pMatrix)
+	{
+		return;
+	}
+	pMatrix->SetMatrix((float*)&projMatrix);
+
+	pMatrix = m_pEffect->GetVariableByName("worldMatrix")->AsMatrix();
+	if (!pMatrix)
+	{
+		return;
+	}
+	pMatrix->SetMatrix((float*)&worldMatrix);
+
+	ID3DX11EffectShaderResourceVariable* pShaderRes = m_pEffect->GetVariableByName("colorMap")->AsShaderResource();
+	if (!pShaderRes)
+	{
+		return;
+	}
+	pShaderRes->SetResource(pShaderResView);
+
+	ID3DX11EffectSamplerVariable* pSampler = m_pEffect->GetVariableByName("colorSampler")->AsSampler();
+	if (!pSampler)
+	{
+		return;
+	}
+	pSampler->SetSampler(0, pSamplerState);
 
 	m_pD3d11DeviceContext->IASetInputLayout(pInputLayOut);
 	UINT dwStrides = sizeof(VertexFmt);
@@ -1090,10 +1038,6 @@ void CD3dDisplay::Effect()
 	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &pVertexBuff, &dwStrides, &dwOffsets);
 	m_pD3d11DeviceContext->IASetIndexBuffer(pIndexBuff, DXGI_FORMAT_R16_UINT, 0);
 	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_pD3d11DeviceContext->VSSetShader(pVs, 0, 0);
-	m_pD3d11DeviceContext->PSSetShader(pPs, 0, 0);
-	m_pD3d11DeviceContext->PSSetShaderResources(0, 1, &pShaderResView);
-	m_pD3d11DeviceContext->PSSetSamplers(0, 1, &pSamplerState);
 
 	D3D11_VIEWPORT vp;
 	vp.Height = (FLOAT)m_dwHeight;
@@ -1104,6 +1048,12 @@ void CD3dDisplay::Effect()
 	vp.MaxDepth = 1.0f;
 	m_pD3d11DeviceContext->RSSetViewports(1, &vp);
 
+
+	hr = pEffectPass->Apply(0, m_pD3d11DeviceContext);
+	if (FAILED(hr))
+	{
+		return;
+	}
 	m_pD3d11DeviceContext->DrawIndexed(indexSize, 0, 0);
 	m_pDXGISwapChain->Present(0, 0);
 }
