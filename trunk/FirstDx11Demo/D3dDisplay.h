@@ -20,6 +20,8 @@ public:
 
 	void Effect();
 
+	void MultiTexture();
+
 private:
     ID3D11Device*                   m_pD3d11Device;
     ID3D11DeviceContext*            m_pD3d11DeviceContext;
@@ -27,6 +29,7 @@ private:
 	ID3D11RenderTargetView*			m_pRenderTargetView;
 	ID3D11DepthStencilView*			m_pDepthStencilView;
 	ID3DX11Effect*					m_pEffect;
+	ID3D11RasterizerState*			m_pResterizerState;
 
     D3D_FEATURE_LEVEL               m_nD3DFeatureLevel;
     D3D_DRIVER_TYPE                 m_nD3DDriveType;

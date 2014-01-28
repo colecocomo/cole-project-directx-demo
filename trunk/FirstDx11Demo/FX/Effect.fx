@@ -1,4 +1,5 @@
 Texture2D colorMap : register(t0);
+Texture2D colorMap2 : register(t1);
 SamplerState colorSampler : register(s0);
 
 cbuffer perFramView : register(b0)
@@ -45,6 +46,23 @@ float4 PS_Main( PS_Input frag ) : SV_TARGET
     return 1.0f - colorMap.Sample(colorSampler, frag.tex0);
 }
 
+float4 PS_Shift(PS_Input frag) : SV_TARGET
+{
+	float4 color  = colorMap.Sample(colorSampler, frag.tex0);
+	float4 outColor;
+
+	outColor.x = color.y;
+	outColor.y = color.z;
+	outColor.z = color.x;
+	outColor.w = color.w;
+
+	return outColor;
+}
+
+float4 PS_MultiTexture(PS_Input frag) : SV_TARGET
+{
+	return colorMap.Sample(colorSampler, frag.tex0) * colorMap2.Sample(colorSampler, frag.tex0);
+}
 
 technique11 ColorInversion
 {
@@ -54,5 +72,19 @@ technique11 ColorInversion
         SetGeometryShader( NULL );
         SetPixelShader( CompileShader( ps_4_0, PS_Main() ) );
 
+	}
+
+	pass P1
+	{
+		SetVertexShader( CompileShader( vs_4_0, VS_Main() ) );
+        SetGeometryShader( NULL );
+        SetPixelShader( CompileShader( ps_4_0, PS_Shift() ) );
+	}
+
+	pass P2
+	{
+		SetVertexShader( CompileShader( vs_4_0, VS_Main() ) );
+        SetGeometryShader( NULL );
+        SetPixelShader( CompileShader( ps_4_0, PS_MultiTexture() ) );
 	}
 }
