@@ -2,6 +2,7 @@
 #include <d3d11.h>
 #include <D3DX11.h>
 #include <d3dx11effect.h>
+#include <string>
 
 class CD3dDisplay
 {
@@ -21,6 +22,8 @@ public:
 	void Effect();
 
 	void MultiTexture();
+
+	bool LoadObjModelFromFile(std::wstring szFileName);
 
 private:
     ID3D11Device*                   m_pD3d11Device;

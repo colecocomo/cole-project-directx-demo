@@ -4,7 +4,8 @@
 #include <xnamath.h>
 #include <D3DX11async.h>
 #include <D3Dcommon.h>
-#include <string.h>
+#include <fstream>
+#include <vector>
 
 CD3dDisplay::CD3dDisplay(void):m_pD3d11Device(0),
 m_pD3d11DeviceContext(0),
@@ -1328,4 +1329,109 @@ void CD3dDisplay::MultiTexture()
 	}
 	m_pD3d11DeviceContext->DrawIndexed(indexSize, 0, 0);
 	m_pDXGISwapChain->Present(0, 0);
+}
+
+bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName )
+{
+	std::wifstream fileIn(szFileName.c_str());
+	WCHAR token;
+	float fX, fY, fZ = .0f;
+
+	typedef std::vector<XMFLOAT3>  Float3Vector;
+	typedef Float3Vector::iterator Float3VectorIter;
+	typedef std::vector<XMFLOAT2> Float2Vector;
+	typedef Float2Vector::iterator Float2VectorIter;
+	Float3Vector posVector;
+	Float3Vector normalVector;
+	Float2Vector textureVector;
+
+	if (fileIn)
+	{
+		while(fileIn)
+		{
+			token = fileIn.get();
+			switch (token)
+			{
+			case '#':
+				continue;
+				break;
+			case 'v':
+				{
+					token = fileIn.get();
+					switch (token)
+					{
+					case ' ':	// 顶点数据
+						{
+							fileIn>>fX>>fY>>fZ;
+							posVector.push_back(XMFLOAT3(fX, fY, fZ));
+						}
+						break;
+					case 'n':	// 顶点法线
+						{
+							fileIn>>fX>>fY>>fZ;
+							normalVector.push_back(XMFLOAT3(fX, fY, fZ));
+						}
+						break;
+					case 't':	// 顶点纹理
+						{
+							fileIn>>fX>>fY;
+							textureVector.push_back(XMFLOAT2(fX, fY));
+						}
+						break;
+					}
+				}
+				break;
+			case 'f':	// 面
+				{
+					token = fileIn.get();
+					if (token == ' ')
+					{
+						std::wstring strFace;
+						token = fileIn.get();
+						while (token != '\n')
+						{
+							strFace += token;
+							token = fileIn.get();
+						}
+
+						int nIdx = 0;
+						int nFaceSize = strFace.length();
+						std::wstring faceToken;
+						int nTmp = 0;
+						while(nIdx < nFaceSize)
+						{
+							token = strFace[nIdx];
+							if (token == '/')
+							{
+								switch (nTmp)
+								{
+								case 0:
+									{
+										fX = _wtof(faceToken.c_str());
+									}
+									break;
+								case 1:
+									{
+										fX = _wtof(faceToken.c_str());
+									}
+									break;
+								case 2:
+									{
+										fX = _wtof(faceToken.c_str());
+									}
+									break;
+								}
+							}
+							else if (token)
+							{
+							}
+						}
+					}
+				}
+				break;
+			}
+		}
+	}
+
+	return true;
 }
