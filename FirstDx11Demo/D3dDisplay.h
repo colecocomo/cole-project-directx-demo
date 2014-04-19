@@ -1,5 +1,5 @@
 #pragma once
-#include <d3d11.h>
+//#include <d3d11.h>
 #include <D3DX11.h>
 #include <d3dx11effect.h>
 #include <string>
@@ -19,11 +19,15 @@ public:
 	void DrawSprite();
 	void DrawCube();
 
+	void DrawObjModel();
+
 	void Effect();
 
 	void MultiTexture();
 
-	bool LoadObjModelFromFile(std::wstring szFileName);
+	bool LoadObjModelFromFile(	std::wstring szFileName 
+								/*ID3D11Buffer* pVertexBuff = NULL,
+								ID3D11Buffer* pIndexBuff = NULL*/);
 
 private:
     ID3D11Device*                   m_pD3d11Device;
