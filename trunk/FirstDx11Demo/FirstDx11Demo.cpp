@@ -49,7 +49,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	{
         if (msg.message != WM_QUIT)
         { 
-			g_D3dDisplay.MultiTexture();
+			//g_D3dDisplay.MultiTexture();
+			g_D3dDisplay.DrawObjModel();
         }
 
 		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))

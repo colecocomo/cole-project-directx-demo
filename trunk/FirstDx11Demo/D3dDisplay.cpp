@@ -1331,23 +1331,41 @@ void CD3dDisplay::MultiTexture()
 	m_pDXGISwapChain->Present(0, 0);
 }
 
-bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName )
+bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName
+										/*ID3D11Buffer* pVertexBuff/* = NULL,*/
+										/*ID3D11Buffer* pIndexBuff = NULL*/)
 {
+	HRESULT hr = S_OK;
+
 	std::wifstream fileIn(szFileName.c_str());
+	int nCnt = fileIn.gcount();
 	WCHAR token;
 	float fX, fY, fZ = .0f;
+	int nIndex1, nIndex2, nIndex3 = 0;
+	int nUIndx, nVIndex = 0;
+	int nNormal1, nNormal2, nNormal3 = 0;
 
 	typedef std::vector<XMFLOAT3>  Float3Vector;
 	typedef Float3Vector::iterator Float3VectorIter;
 	typedef std::vector<XMFLOAT2> Float2Vector;
 	typedef Float2Vector::iterator Float2VectorIter;
+	typedef std::vector<int> PosIndexVector;
+	typedef PosIndexVector::iterator PosIndexVetorIter;
+	typedef std::vector<int> TCIndexVector;
+	typedef TCIndexVector::iterator TCIndexVectorIter;
+	typedef std::vector<int> NormalIndexVector;
+	typedef NormalIndexVector::iterator NormalIndexVectorIter;
+
 	Float3Vector posVector;
 	Float3Vector normalVector;
 	Float2Vector textureVector;
+	PosIndexVector posIndexVector;
+	TCIndexVector tcIndexVector;
+	NormalIndexVector normalIndexVector;
 
 	if (fileIn)
 	{
-		while(fileIn)
+		while(!fileIn.eof())
 		{
 			token = fileIn.get();
 			switch (token)
@@ -1397,34 +1415,97 @@ bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName )
 						int nIdx = 0;
 						int nFaceSize = strFace.length();
 						std::wstring faceToken;
-						int nTmp = 0;
+						int nSpaceIdx = 0;
+						int nBackSlashIdx = 0;
 						while(nIdx < nFaceSize)
 						{
 							token = strFace[nIdx];
 							if (token == '/')
 							{
-								switch (nTmp)
+								if (faceToken.empty())
+								{
+									continue;
+								}
+
+								switch (nBackSlashIdx)
 								{
 								case 0:
 									{
-										fX = _wtof(faceToken.c_str());
+										nIndex1 = _wtoi(faceToken.c_str());
+										posIndexVector.push_back(nIndex1);
+										/*switch (nSpaceIdx)
+										{
+										case 0:
+										{
+										nIndex1 = _wtof(faceToken.c_str());
+										}
+										break;
+										case 1:
+										{
+										nIndex2 = _wtof(faceToken.c_str());
+										}
+										break;
+										case 2:
+										{
+										nIndex3 = _wtof(faceToken.c_str());
+										}
+										break;
+										}*/
 									}
 									break;
 								case 1:
 									{
-										fX = _wtof(faceToken.c_str());
+										nUIndx = _wtoi(faceToken.c_str());
+										tcIndexVector.push_back(nUIndx);
+										/*switch (nSpaceIdx)
+										{
+										case 0:
+										{
+										nUIndx = _wtof(faceToken.c_str());
+										}
+										break;
+										case 1:
+										{
+										nVIndex = _wtof(faceToken.c_str());
+										}
+										break;
+										}*/										
 									}
 									break;
 								case 2:
 									{
-										fX = _wtof(faceToken.c_str());
+										nNormal1 = _wtoi(faceToken.c_str());
+										normalIndexVector.push_back(nNormal1);
+										/*switch (nSpaceIdx)
+										{
+										case 0:
+										{
+										nNormal1 = _wtof(faceToken.c_str());
+										}
+										break;
+										case 1:
+										{
+										nNormal2 = _wtof(faceToken.c_str());
+										}
+										break;
+										case 2:
+										{
+										nNormal3 = _wtof(faceToken.c_str());
+										}
+										break;
+										}*/
 									}
 									break;
 								}
+								nBackSlashIdx++;
 							}
-							else if (token)
+							else if (token == ' ')
 							{
+								nBackSlashIdx = 0;
+								nSpaceIdx ++;
 							}
+
+							nIdx++;
 						}
 					}
 				}
@@ -1433,5 +1514,35 @@ bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName )
 		}
 	}
 
+	// create res
+	ID3D11Buffer* pVertexBuffer = NULL;
+
+	D3D11_BUFFER_DESC vertexBufferDesc;
+	ZeroMemory(&vertexBufferDesc, sizeof(D3D11_BUFFER_DESC));
+	vertexBufferDesc.ByteWidth = sizeof(XMFLOAT3) * posVector.size();
+	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vertexBufferDesc.CPUAccessFlags = 0;
+	vertexBufferDesc.StructureByteStride = sizeof(XMFLOAT3);
+	vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	vertexBufferDesc.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA subResData;
+	ZeroMemory(&subResData, sizeof(subResData));
+	subResData.pSysMem = &posVector[0];
+
+	hr = m_pD3d11Device->CreateBuffer(&vertexBufferDesc, &subResData, &pVertexBuffer);
+	if (FAILED(hr))
+	{
+
+	}
+
 	return true;
+}
+
+void CD3dDisplay::DrawObjModel()
+{
+	if (LoadObjModelFromFile(_T("E:\\DX11\\FirstDx11Demo\\Debug\\RES\\ObjModel\\test.txt")))
+	{
+
+	}
 }
