@@ -5,7 +5,6 @@
 #include <D3DX11async.h>
 #include <D3Dcommon.h>
 #include <fstream>
-#include <vector>
 
 CD3dDisplay::CD3dDisplay(void):m_pD3d11Device(0),
 m_pD3d11DeviceContext(0),
@@ -29,6 +28,8 @@ m_pSamplerState(0),
 m_dwHeight(0),
 m_dwWidth(0)
 {
+	m_vObjModelIndexBuff.clear();
+	m_vObjModelVertexBuff.clear();
 }
 
 
@@ -49,6 +50,20 @@ CD3dDisplay::~CD3dDisplay(void)
 	SAFE_RELEASE(m_pPsShaderError);
 	SAFE_RELEASE(m_pShaderResView);
 	SAFE_RELEASE(m_pSamplerState);
+
+	BufferVectorIter iter = m_vObjModelIndexBuff.begin();
+	while(iter != m_vObjModelIndexBuff.end())
+	{
+		SAFE_RELEASE((*iter));
+		iter++;
+	}
+
+	iter = m_vObjModelVertexBuff.begin();
+	while(iter != m_vObjModelVertexBuff.end())
+	{
+		SAFE_RELEASE((*iter));
+		iter++;
+	}
 }
 
 bool CD3dDisplay::InitDevice3D(HWND hWnd)
@@ -1338,7 +1353,6 @@ bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName
 	HRESULT hr = S_OK;
 
 	std::wifstream fileIn(szFileName.c_str());
-	int nCnt = fileIn.gcount();
 	WCHAR token;
 	float fX, fY, fZ = .0f;
 	int nIndex1, nIndex2, nIndex3 = 0;
@@ -1370,8 +1384,14 @@ bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName
 			token = fileIn.get();
 			switch (token)
 			{
-			case '#':
-				continue;
+			case '#':				
+				{
+					token = fileIn.get();
+					while(token != '\n')
+					{
+						token = fileIn.get();
+					}
+				}
 				break;
 			case 'v':
 				{
@@ -1420,6 +1440,7 @@ bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName
 						while(nIdx < nFaceSize)
 						{
 							token = strFace[nIdx];
+							nIdx++;
 							if (token == '/')
 							{
 								if (faceToken.empty())
@@ -1504,8 +1525,10 @@ bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName
 								nBackSlashIdx = 0;
 								nSpaceIdx ++;
 							}
-
-							nIdx++;
+							else
+							{
+								faceToken += token;
+							}
 						}
 					}
 				}
@@ -1533,15 +1556,38 @@ bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName
 	hr = m_pD3d11Device->CreateBuffer(&vertexBufferDesc, &subResData, &pVertexBuffer);
 	if (FAILED(hr))
 	{
-
+		return false;
 	}
+
+	m_vObjModelVertexBuff.push_back(pVertexBuffer);
+
+	ID3D11Buffer* pIndexBuffer = NULL;
+
+	D3D11_BUFFER_DESC indexBufferDesc;
+	ZeroMemory(&indexBufferDesc, sizeof(D3D11_BUFFER_DESC));
+	indexBufferDesc.ByteWidth = sizeof(int) * posIndexVector.size();
+	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	indexBufferDesc.CPUAccessFlags = 0;
+	indexBufferDesc.StructureByteStride = sizeof(int);
+	indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	indexBufferDesc.MiscFlags = 0;
+
+	ZeroMemory(&subResData, sizeof(subResData));
+	subResData.pSysMem = &posIndexVector[0];
+
+	hr = m_pD3d11Device->CreateBuffer(&indexBufferDesc, &subResData, &pIndexBuffer);
+	if (FAILED(hr))
+	{
+		return false;
+	}
+	m_vObjModelIndexBuff.push_back(pIndexBuffer);
 
 	return true;
 }
 
 void CD3dDisplay::DrawObjModel()
 {
-	if (LoadObjModelFromFile(_T("E:\\DX11\\FirstDx11Demo\\Debug\\RES\\ObjModel\\test.txt")))
+	if (LoadObjModelFromFile(_T("E:\\DX11\\FirstDx11Demo\\Debug\\RES\\ObjModel\\spaceCompound.obj")))
 	{
 
 	}
