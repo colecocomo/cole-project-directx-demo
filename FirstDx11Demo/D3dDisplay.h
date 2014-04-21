@@ -3,6 +3,7 @@
 #include <D3DX11.h>
 #include <d3dx11effect.h>
 #include <string>
+#include <vector>
 
 class CD3dDisplay
 {
@@ -55,5 +56,10 @@ private:
 
 	UINT							m_dwHeight;
 	UINT							m_dwWidth;
+
+	typedef std::vector<ID3D11Buffer*> BufferVector;
+	typedef BufferVector::iterator BufferVectorIter;
+	BufferVector				m_vObjModelVertexBuff;
+	BufferVector				m_vObjModelIndexBuff;
 };
 
