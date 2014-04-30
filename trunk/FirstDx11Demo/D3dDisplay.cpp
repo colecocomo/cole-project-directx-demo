@@ -247,7 +247,7 @@ bool CD3dDisplay::InitDevice3D(HWND hWnd)
 		return false;
 	}
 
-    return true;
+    return LoadObjModelFromFile(_T("E:\\DX11\\FirstDx11Demo\\Debug\\RES\\ObjModel\\spaceCompound.obj"));
 }
 
 bool CD3dDisplay::InitDevice2D( HWND hWnd )
@@ -1346,9 +1346,7 @@ void CD3dDisplay::MultiTexture()
 	m_pDXGISwapChain->Present(0, 0);
 }
 
-bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName
-										/*ID3D11Buffer* pVertexBuff/* = NULL,*/
-										/*ID3D11Buffer* pIndexBuff = NULL*/)
+bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName)
 {
 	HRESULT hr = S_OK;
 
@@ -1454,76 +1452,29 @@ bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName
 									{
 										nIndex1 = _wtoi(faceToken.c_str());
 										posIndexVector.push_back(nIndex1);
-										/*switch (nSpaceIdx)
-										{
-										case 0:
-										{
-										nIndex1 = _wtof(faceToken.c_str());
-										}
-										break;
-										case 1:
-										{
-										nIndex2 = _wtof(faceToken.c_str());
-										}
-										break;
-										case 2:
-										{
-										nIndex3 = _wtof(faceToken.c_str());
-										}
-										break;
-										}*/
 									}
 									break;
 								case 1:
 									{
 										nUIndx = _wtoi(faceToken.c_str());
-										tcIndexVector.push_back(nUIndx);
-										/*switch (nSpaceIdx)
-										{
-										case 0:
-										{
-										nUIndx = _wtof(faceToken.c_str());
-										}
-										break;
-										case 1:
-										{
-										nVIndex = _wtof(faceToken.c_str());
-										}
-										break;
-										}*/										
+										tcIndexVector.push_back(nUIndx);								
 									}
 									break;
 								case 2:
 									{
 										nNormal1 = _wtoi(faceToken.c_str());
 										normalIndexVector.push_back(nNormal1);
-										/*switch (nSpaceIdx)
-										{
-										case 0:
-										{
-										nNormal1 = _wtof(faceToken.c_str());
-										}
-										break;
-										case 1:
-										{
-										nNormal2 = _wtof(faceToken.c_str());
-										}
-										break;
-										case 2:
-										{
-										nNormal3 = _wtof(faceToken.c_str());
-										}
-										break;
-										}*/
 									}
 									break;
 								}
 								nBackSlashIdx++;
+								faceToken = _T("");
 							}
 							else if (token == ' ')
 							{
 								nBackSlashIdx = 0;
 								nSpaceIdx ++;
+								faceToken = _T("");
 							}
 							else
 							{
@@ -1587,8 +1538,148 @@ bool CD3dDisplay::LoadObjModelFromFile( std::wstring szFileName
 
 void CD3dDisplay::DrawObjModel()
 {
-	if (LoadObjModelFromFile(_T("E:\\DX11\\FirstDx11Demo\\Debug\\RES\\ObjModel\\spaceCompound.obj")))
-	{
+	HRESULT hr = S_OK;
+	ID3DBlob* pVsBuff = NULL;
+	ID3DBlob* pVsShaderError = NULL;
+	ID3DBlob* pPsBuff = NULL;
+	ID3DBlob* pPsShaderError = NULL;
+	ID3D11VertexShader* pVs = NULL;
+	ID3D11PixelShader* pPs = NULL;
+	ID3D11InputLayout* pInputLayout = NULL;
 
+	hr = D3DX11CompileFromFile( _T("FX/ObjModel.fx"),
+								0, 
+								NULL,
+								"VS_Main",
+								"vs_4_0",
+								0,
+								0,
+								NULL,
+								&pVsBuff,
+								&pVsShaderError,
+								NULL);
+	if (FAILED(hr))
+	{
+		void* str = pVsShaderError->GetBufferPointer();
+		return;
 	}
+
+	hr = m_pD3d11Device->CreateVertexShader(pVsBuff->GetBufferPointer(), pVsBuff->GetBufferSize(), NULL, &pVs);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	hr = D3DX11CompileFromFile( _T("FX/ObjModel.fx"),
+								0, 
+								NULL,
+								"PS_Main",
+								"ps_4_0",
+								0,
+								0,
+								NULL,
+								&pPsBuff,
+								&pPsShaderError,
+								NULL);
+	if (FAILED(hr))
+	{
+		void* pTmp = pPsShaderError->GetBufferPointer();
+		return;
+	}
+
+	hr = m_pD3d11Device->CreatePixelShader(pPsBuff->GetBufferPointer(), pPsBuff->GetBufferSize(), NULL, &pPs);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	D3D11_INPUT_ELEMENT_DESC inputDesc[1];
+	ZeroMemory(&inputDesc, sizeof(inputDesc));
+	inputDesc[0].SemanticName = "POSITION";
+	inputDesc[0].InputSlot = 0;
+	inputDesc[0].AlignedByteOffset = 0;
+	inputDesc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	inputDesc[0].SemanticIndex = 0;
+
+	hr = m_pD3d11Device->CreateInputLayout(	inputDesc, 
+											1,
+											pVsBuff->GetBufferPointer(),
+											pVsBuff->GetBufferSize(),
+											&pInputLayout);
+	if (FAILED(hr))
+	{
+		return ;
+	}
+
+	XMMATRIX viewMatrix, projMatrix, worldMatrix;
+	ZeroMemory(&viewMatrix, sizeof(XMMATRIX));
+	ZeroMemory(&projMatrix, sizeof(XMMATRIX));
+	ZeroMemory(&worldMatrix, sizeof(XMMATRIX));
+	FXMVECTOR eyePos = XMVectorSet(1.0f, 1.0f, -1.0f, 1.0f);
+	FXMVECTOR lookPos = XMVectorSet(.0f, .0f, .0f, 1.0f);
+	FXMVECTOR upDir = XMVectorSet(.0f, 1.0f, .0f, .0f);
+
+	viewMatrix = XMMatrixIdentity();
+	viewMatrix = XMMatrixTranspose(viewMatrix);
+	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
+	projMatrix = XMMatrixTranspose(projMatrix);
+	worldMatrix = XMMatrixRotationRollPitchYaw(.0f, .7f, .7f);
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, 0.0f, 10.0f));
+	worldMatrix = XMMatrixTranspose(worldMatrix);
+
+	ID3D11Buffer* pViewMatrixCB = NULL;
+	ID3D11Buffer* pProjMatrixCB = NULL;
+	ID3D11Buffer* pworldMatrixCB = NULL;
+
+	D3D11_BUFFER_DESC buffDesc;
+	ZeroMemory(&buffDesc, sizeof(D3D11_BUFFER_DESC));
+	buffDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	buffDesc.ByteWidth = sizeof(XMMATRIX);
+	buffDesc.Usage = D3D11_USAGE_DEFAULT;
+	hr = m_pD3d11Device->CreateBuffer(&buffDesc, NULL, &pViewMatrixCB);
+	if (FAILED(hr))
+	{
+		return;
+	}
+	hr = m_pD3d11Device->CreateBuffer(&buffDesc, NULL, &pProjMatrixCB);
+	if (FAILED(hr))
+	{
+		return;
+	}
+	hr = m_pD3d11Device->CreateBuffer(&buffDesc, NULL, &pworldMatrixCB);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	m_pD3d11DeviceContext->UpdateSubresource(pViewMatrixCB, 0, 0, reinterpret_cast<void*> (&viewMatrix), 0, 0 );
+	m_pD3d11DeviceContext->UpdateSubresource(pProjMatrixCB, 0, 0, reinterpret_cast<void*> (&projMatrix), 0, 0 );
+	m_pD3d11DeviceContext->UpdateSubresource(pworldMatrixCB, 0, 0, reinterpret_cast<void*> (&worldMatrix), 0, 0 );
+
+	m_pD3d11DeviceContext->ClearDepthStencilView( m_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0 );
+
+	m_pD3d11DeviceContext->VSSetConstantBuffers(0, 1, &pViewMatrixCB);
+	m_pD3d11DeviceContext->VSSetConstantBuffers(1, 1, &pProjMatrixCB);
+	m_pD3d11DeviceContext->VSSetConstantBuffers(2, 1, &pworldMatrixCB);
+
+	m_pD3d11DeviceContext->IASetInputLayout(pInputLayout);
+	UINT dwStrides = sizeof(XMFLOAT3);
+	UINT dwOffsets = 0;
+	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_vObjModelVertexBuff[0], &dwStrides, &dwOffsets);
+	m_pD3d11DeviceContext->IASetIndexBuffer(m_vObjModelIndexBuff[0], DXGI_FORMAT_R16_UINT, 0);
+	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	m_pD3d11DeviceContext->VSSetShader(pVs, 0, 0);
+	//m_pD3d11DeviceContext->PSSetShader(pPs, 0, 0);
+
+	D3D11_VIEWPORT vp;
+	vp.Height = (FLOAT)m_dwHeight;
+	vp.Width = (FLOAT)m_dwWidth;
+	vp.TopLeftX = .0f;
+	vp.TopLeftY = .0f;
+	vp.MinDepth = .0f;
+	vp.MaxDepth = 1.0f;
+	m_pD3d11DeviceContext->RSSetViewports(1, &vp);
+
+	m_pD3d11DeviceContext->DrawIndexed(300, 0, 0);
+	m_pDXGISwapChain->Present(0, 0);
 }

@@ -26,9 +26,7 @@ public:
 
 	void MultiTexture();
 
-	bool LoadObjModelFromFile(	std::wstring szFileName 
-								/*ID3D11Buffer* pVertexBuff = NULL,
-								ID3D11Buffer* pIndexBuff = NULL*/);
+	bool LoadObjModelFromFile(	std::wstring szFileName );
 
 private:
     ID3D11Device*                   m_pD3d11Device;
