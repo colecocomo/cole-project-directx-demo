@@ -4,6 +4,7 @@
 #include <d3dx11effect.h>
 #include <string>
 #include <vector>
+#include <dxgi.h>
 
 class CD3dDisplay
 {
@@ -26,7 +27,11 @@ public:
 
 	void MultiTexture();
 
-	bool LoadObjModelFromFile(	std::wstring szFileName );
+	bool LoadModelFromFile(	std::wstring szFileName );
+
+	void ToggleFullScreen();
+
+	void UpdateElapseTime();
 
 private:
     ID3D11Device*                   m_pD3d11Device;
@@ -59,5 +64,16 @@ private:
 	typedef BufferVector::iterator BufferVectorIter;
 	BufferVector				m_vObjModelVertexBuff;
 	BufferVector				m_vObjModelIndexBuff;
+
+	bool						m_isFullScreen;
+
+	unsigned int				m_dwElapseTime;
+	unsigned int				m_dwDeltaTime;
+
+	// skull model
+	ID3D11Buffer*				m_pSkullVertexBuffer;
+	ID3D11Buffer*				m_pSkullIndexBuffer;
+	unsigned int				m_dwSkullVertexCnt;
+	unsigned int				m_dwSkullIndexCnt;
 };
 

@@ -40,3 +40,28 @@ struct VertexFmt
 	XMFLOAT3 position;
 	XMFLOAT2 uv;
 };
+
+struct VertexWithOutUV
+{
+	XMFLOAT3 positon;
+};
+
+struct VertexUV
+{
+	XMFLOAT2 uv;
+};
+
+struct ConstantBuffer
+{
+	XMMATRIX worldMatrix;
+	XMMATRIX viewMatrix;
+	XMMATRIX projMatrix;
+	FLOAT	   fElapseTime;
+};
+
+struct VertexFmtWithNormal
+{
+	XMFLOAT3 position;
+	XMFLOAT3 normal;
+	//XMFLOAT2 uv;
+};

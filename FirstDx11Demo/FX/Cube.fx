@@ -1,19 +1,12 @@
 Texture2D colorMap : register(t0);
 SamplerState colorSampler : register(s0);
 
-cbuffer perFramView : register(b0)
-{
-	matrix viewMatrix;
-}; 
-
-cbuffer perFramProj : register(b1)
-{
-	matrix projMatrix;
-}; 
-
-cbuffer perFramWorld : register(b2)
+cbuffer constantBuffer : register(b0)
 {
 	matrix worldMatrix;
+	matrix viewMatrix;
+	matrix projMatrix;
+	float elapseTime;
 }; 
 
 struct VS_Input
@@ -32,6 +25,8 @@ struct PS_Input
 PS_Input VS_Main( VS_Input vertex )
 {
 	PS_Input vs_out;
+	vertex.pos.xy += 0.5f*sin(vertex.pos.x)*sin(3.0f*elapseTime);
+	vertex.pos.z *= 0.6f + 0.4f*sin(2.0f*elapseTime);
 	vs_out.pos = mul(vertex.pos, worldMatrix);
 	vs_out.pos = mul(vs_out.pos, viewMatrix);
 	vs_out.pos = mul(vs_out.pos, projMatrix);

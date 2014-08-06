@@ -1,21 +1,15 @@
-cbuffer perFramView : register(b0)
-{
-	matrix viewMatrix;
-}; 
-
-cbuffer perFramProj : register(b1)
-{
-	matrix projMatrix;
-}; 
-
-cbuffer perFramWorld : register(b2)
+cbuffer constantBuffer : register(b0)
 {
 	matrix worldMatrix;
+	matrix viewMatrix;
+	matrix projMatrix;
+	float elapseTime;
 }; 
 
 struct VS_Input
 {
 	float4 pos : POSITION;
+	float4 normal : NORMAL;
 };
 
 struct PS_Input
@@ -38,6 +32,9 @@ float4 PS_Main( PS_Input frag ) : SV_TARGET
 {
     //return colorMap.Sample(colorSampler, frag.tex0);
 	float4 ret;
-	ret.xyzw = 255;
+	ret.w = 255;
+	ret.x = 112;
+	ret.y = 146;
+	ret.z = 190;
 	return ret;
 }
