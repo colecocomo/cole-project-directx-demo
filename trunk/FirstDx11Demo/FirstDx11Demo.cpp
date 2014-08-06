@@ -45,18 +45,22 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_FIRSTDX11DEMO));
 
 	// Main message loop:
-	while (GetMessage(&msg, NULL, 0, 0))
+	while(true)
 	{
-        if (msg.message != WM_QUIT)
-        { 
-			//g_D3dDisplay.MultiTexture();
-			g_D3dDisplay.DrawObjModel();
-        }
-
-		if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+		g_D3dDisplay.UpdateElapseTime();
+		g_D3dDisplay.DrawObjModel();
+		if (PeekMessage(&msg, NULL, 0, 0,PM_REMOVE))
 		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			if (msg.message == WM_QUIT)
+			{
+				break;
+			}
+
+			if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
 		}
 	}
 
@@ -175,6 +179,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_DESTROY:
 		PostQuitMessage(0);
+		break;
+	//case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
+		{
+			SHORT altKeyState = GetKeyState(VK_LMENU);/* | GetKeyState(VK_RMENU)*/;
+			SHORT enterKeyState = GetKeyState(VK_RETURN);
+			if (altKeyState & 0x8000 && enterKeyState & 0x8000)
+			{
+				g_D3dDisplay.ToggleFullScreen();
+			}
+		}
 		break;
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
