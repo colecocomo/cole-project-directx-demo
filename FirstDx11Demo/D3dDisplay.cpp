@@ -1748,7 +1748,6 @@ void CD3dDisplay::DrawObjModel()
 	hr = m_pD3d11Device->CreateVertexShader(pVsBuff->GetBufferPointer(), pVsBuff->GetBufferSize(), NULL, &pVs);
 	if (FAILED(hr))
 	{
-		hr = m_pD3d11Device->GetDeviceRemovedReason();
 		return;
 	}
 
@@ -1765,7 +1764,7 @@ void CD3dDisplay::DrawObjModel()
 								NULL);
 	if (FAILED(hr))
 	{
-		void* pTmp = pPsShaderError->GetBufferPointer();
+		void* str = pPsShaderError->GetBufferPointer();
 		return;
 	}
 
@@ -1777,7 +1776,7 @@ void CD3dDisplay::DrawObjModel()
 
 	D3D11_RASTERIZER_DESC rasterizerDesc;
 	ZeroMemory(&rasterizerDesc, sizeof(D3D11_RASTERIZER_DESC));
-	rasterizerDesc.FillMode = D3D11_FILL_WIREFRAME;
+	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
 	rasterizerDesc.CullMode = D3D11_CULL_BACK;
 	rasterizerDesc.FrontCounterClockwise = FALSE;
 	hr = m_pD3d11Device->CreateRasterizerState(&rasterizerDesc, &pRasterizerState);
@@ -1821,7 +1820,7 @@ void CD3dDisplay::DrawObjModel()
 	viewMatrix = XMMatrixTranspose(viewMatrix);
 	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
 	projMatrix = XMMatrixTranspose(projMatrix);
-	worldMatrix = XMMatrixRotationRollPitchYaw(.0f, .7f+3.14*0.5*m_dwElapseTime*0.001, .0f);
+	worldMatrix = XMMatrixRotationRollPitchYaw(.0f, .7f+3.14*0.1*m_dwElapseTime*0.001, .0f);
 	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, -2.0f, 20.0f));
 	worldMatrix = XMMatrixTranspose(worldMatrix);
 
@@ -1837,6 +1836,8 @@ void CD3dDisplay::DrawObjModel()
 	constantBuffer.projMatrix = projMatrix;
 	constantBuffer.viewMatrix = viewMatrix;
 	constantBuffer.worldMatrix = worldMatrix;
+	constantBuffer.normalMatrix = worldViewProjNormalMatrix;
+	XMStoreFloat4(&constantBuffer.eyePos, eyePos);
 	constantBuffer.fElapseTime = (float)m_dwElapseTime;
 
 	D3D11_BUFFER_DESC buffDesc;
@@ -1910,8 +1911,8 @@ void CD3dDisplay::UpdateElapseTime()
 	{
 		m_dwDeltaTime = (GetTickCount() >= m_dwElapseTime)?(GetTickCount() - m_dwElapseTime):0;
 		m_dwElapseTime = GetTickCount();
-		std::wstringstream debugString;
+		/*std::wstringstream debugString;
 		debugString<<"The elapse time is:"<<m_dwElapseTime/1000<<"\n";
-		OutputDebugString(debugString.str().c_str());
+		OutputDebugString(debugString.str().c_str());*/
 	}
 }

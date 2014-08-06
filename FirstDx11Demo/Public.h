@@ -56,7 +56,9 @@ struct ConstantBuffer
 	XMMATRIX worldMatrix;
 	XMMATRIX viewMatrix;
 	XMMATRIX projMatrix;
-	FLOAT	   fElapseTime;
+	XMMATRIX normalMatrix;
+	XMFLOAT4 eyePos;
+	FLOAT	 fElapseTime;
 };
 
 struct VertexFmtWithNormal
