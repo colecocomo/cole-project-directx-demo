@@ -180,7 +180,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;
-	//case WM_KEYDOWN:
+	case WM_MOUSEMOVE:
+		{
+			static int nOldX = LOWORD(lParam);
+			static int nOldY = HIWORD(lParam);
+			
+			int keyState = (unsigned int)wParam;
+			int nX = LOWORD(lParam);
+			int nY = HIWORD(lParam);
+			if (keyState == MK_LBUTTON)
+			{
+				int disX = abs((float)nX - (float)nOldX);
+				int disY = abs((float)nY - (float)nOldY);
+				if (disX > disY)
+				{
+					g_D3dDisplay.SetLocalTranslation(.0f, (float)(nX - nOldX), .0f);
+				}
+				else if (disX < disY)
+				{
+					g_D3dDisplay.SetLocalTranslation((float)(nY - nOldY), .0f, .0f);
+				}
+			}
+			nOldX = nX;
+			nOldY = nY;
+		}
+		break;
 	case WM_SYSKEYDOWN:
 		{
 			SHORT altKeyState = GetKeyState(VK_LMENU);/* | GetKeyState(VK_RMENU)*/;

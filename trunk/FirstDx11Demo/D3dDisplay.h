@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <dxgi.h>
+#include <xnamath.h>
 
 class CD3dDisplay
 {
@@ -32,6 +33,12 @@ public:
 	void ToggleFullScreen();
 
 	void UpdateElapseTime();
+
+	void SetEyePos(float x, float y, float z);
+
+	XMFLOAT3 GetEyePos();
+
+	void SetLocalTranslation(float x, float y, float z);
 
 private:
     ID3D11Device*                   m_pD3d11Device;
@@ -75,5 +82,8 @@ private:
 	ID3D11Buffer*				m_pSkullIndexBuffer;
 	unsigned int				m_dwSkullVertexCnt;
 	unsigned int				m_dwSkullIndexCnt;
+
+	XMFLOAT3					m_eyePos;
+	XMMATRIX					m_localTranslation;
 };
 
