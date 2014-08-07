@@ -1,11 +1,33 @@
 #include "StdAfx.h"
 #include "D3dDisplay.h"
 #include "Public.h"
-#include <xnamath.h>
 #include <D3DX11async.h>
 #include <D3Dcommon.h>
 #include <fstream>
 #include <sstream>
+
+using std::wstring;
+
+wstring AnsiToUnicode(const char* pSrc)
+{
+	if (pSrc == NULL)
+	{
+		return NULL;
+	}
+
+	int len = strlen(pSrc);
+
+	int unicodeLen = ::MultiByteToWideChar(CP_ACP, 0, pSrc, -1, NULL, 0);
+	WCHAR* pUnicode = new WCHAR[unicodeLen+1];
+	ZeroMemory(pUnicode, unicodeLen+1);
+	::MultiByteToWideChar(CP_ACP, 0, pSrc, -1, (LPWSTR)pUnicode, unicodeLen);
+
+	wstring ret;
+	ret = pUnicode;
+	SAFE_DELETE(pUnicode);
+
+	return ret;
+}
 
 CD3dDisplay::CD3dDisplay(void):m_pD3d11Device(0),
 m_pD3d11DeviceContext(0),
@@ -38,6 +60,8 @@ m_dwSkullIndexCnt(0)
 {
 	m_vObjModelIndexBuff.clear();
 	m_vObjModelVertexBuff.clear();
+	m_eyePos = XMFLOAT3(.0f, .0f, -1.0f);
+	m_localTranslation = XMMatrixIdentity();
 }
 
 
@@ -1661,7 +1685,8 @@ bool CD3dDisplay::LoadModelFromFile( std::wstring szFileName)
 {
 	HRESULT hr = S_OK;
 
-	std::wifstream fileIn(szFileName.c_str());
+	std::wifstream fileIn;
+	fileIn.open((szFileName.c_str()), std::ios::in, 0x10);
 	if (!fileIn)
 	{
 		return false;
@@ -1742,6 +1767,8 @@ void CD3dDisplay::DrawObjModel()
 	if (FAILED(hr))
 	{
 		void* str = pVsShaderError->GetBufferPointer();
+		wstring strError = AnsiToUnicode((char*)str);
+		OutputDebugString(strError.c_str());
 		return;
 	}
 
@@ -1765,6 +1792,8 @@ void CD3dDisplay::DrawObjModel()
 	if (FAILED(hr))
 	{
 		void* str = pPsShaderError->GetBufferPointer();
+		wstring strError = AnsiToUnicode((char*)str);
+		OutputDebugString(strError.c_str());
 		return;
 	}
 
@@ -1812,15 +1841,17 @@ void CD3dDisplay::DrawObjModel()
 	ZeroMemory(&viewMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&projMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&worldMatrix, sizeof(XMMATRIX));
-	FXMVECTOR eyePos = XMVectorSet(1.0f, 1.0f, -1.0f, 1.0f);
+	FXMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, 1.0f);
 	FXMVECTOR lookPos = XMVectorSet(.0f, .0f, .0f, 1.0f);
 	FXMVECTOR upDir = XMVectorSet(.0f, 1.0f, .0f, .0f);
 
 	viewMatrix = XMMatrixIdentity();
-	viewMatrix = XMMatrixTranspose(viewMatrix);
+	//viewMatrix = XMMatrixTranspose(viewMatrix);
+	FXMVECTOR lookAtPos = XMVectorSet(.0f, .0f, .0f, 1.0f);
+	viewMatrix = XMMatrixLookAtLH(eyePos, lookAtPos, XMVectorSet(.0f, 1.0f, .0f, 1.0f));
 	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
 	projMatrix = XMMatrixTranspose(projMatrix);
-	worldMatrix = XMMatrixRotationRollPitchYaw(.0f, .7f+3.14*0.1*m_dwElapseTime*0.001, .0f);
+	worldMatrix = m_localTranslation;//XMMatrixRotationRollPitchYaw(.0f, .7f+3.14*0.1*m_dwElapseTime*0.001, .0f);
 	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, -2.0f, 20.0f));
 	worldMatrix = XMMatrixTranspose(worldMatrix);
 
@@ -1915,4 +1946,47 @@ void CD3dDisplay::UpdateElapseTime()
 		debugString<<"The elapse time is:"<<m_dwElapseTime/1000<<"\n";
 		OutputDebugString(debugString.str().c_str());*/
 	}
+}
+
+void CD3dDisplay::SetEyePos( float x, float y, float z )
+{
+	XMMATRIX translation = XMMatrixIdentity();// = XMMatrixRotationRollPitchYaw(z * .01f, x * .01f, x * .1f);
+	float fAngle = .0f;
+	if (x > .00001f || x < -.00001f)
+	{
+		fAngle = x * 0.001f;
+		translation._11 *= cos(fAngle);
+		translation._12 = -1 * sin(fAngle);
+		translation._21 = cos(fAngle);
+		translation._22 *= sin(fAngle);
+		//xmmatrixtra
+		FXMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, 1.0f);
+		XMVECTOR eyePosTrans = XMVector3Transform(eyePos, translation);
+		XMStoreFloat3(&m_eyePos, eyePosTrans);
+	}
+
+	if (y > .00001f || y < -.00001f)
+	{
+		fAngle = y * 0.00001f;
+		translation = XMMatrixIdentity();
+		translation._22 *= cos(fAngle);
+		translation._23 = -1 * sin(fAngle);
+		translation._32 = cos(fAngle);
+		translation._33 *= sin(fAngle);
+		//xmmatrixtra
+		FXMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, 1.0f);
+		XMVECTOR eyePosTrans = XMVector3Transform(eyePos, translation);
+		XMStoreFloat3(&m_eyePos, eyePosTrans);
+	}
+}
+
+XMFLOAT3 CD3dDisplay::GetEyePos()
+{
+	return m_eyePos;
+}
+
+void CD3dDisplay::SetLocalTranslation( float x, float y, float z )
+{
+	XMMATRIX localTrans = XMMatrixRotationRollPitchYaw(x * .01f, y * .01f, z * .01f);
+	m_localTranslation = XMMatrixMultiply(m_localTranslation, localTrans);
 }
