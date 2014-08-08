@@ -67,3 +67,10 @@ struct VertexFmtWithNormal
 	XMFLOAT3 normal;
 	//XMFLOAT2 uv;
 };
+
+struct GeometryVertexFmt
+{
+	XMFLOAT3 postion;
+	XMFLOAT3 normal;
+	XMFLOAT2 uv;
+};

@@ -56,7 +56,10 @@ m_dwDeltaTime(0),
 m_pSkullVertexBuffer(0),
 m_pSkullIndexBuffer(0),
 m_dwSkullVertexCnt(0),
-m_dwSkullIndexCnt(0)
+m_dwSkullIndexCnt(0),
+m_pGeometryVertexBuffer(0),
+m_dwGeometryHeight(0),
+m_dwGeometryWidth(0)
 {
 	m_vObjModelIndexBuff.clear();
 	m_vObjModelVertexBuff.clear();
@@ -1989,4 +1992,31 @@ void CD3dDisplay::SetLocalTranslation( float x, float y, float z )
 {
 	XMMATRIX localTrans = XMMatrixRotationRollPitchYaw(x * .01f, y * .01f, z * .01f);
 	m_localTranslation = XMMatrixMultiply(m_localTranslation, localTrans);
+}
+
+void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight )
+{
+	m_dwGeometryWidth = dwWidth;
+	m_dwGeometryHeight = dwHeight;
+
+	unsigned int dwVertexCnt  = 4 * dwWidth * dwWidth;
+	float fHalfWidth = 0.5f * dwWidth;
+	float fHalfHeight = 0.5f * dwHeight;
+	float dx = 0.5f;
+	float dy = (float)dwHeight / (float)(2 * dwWidth);
+
+	GeometryVertexFmt* geometryVertex = new GeometryVertexFmt[dwVertexCnt];
+	unsigned int maxX, maxY = 2 * dwWidth;
+	float fX, fZ = .0f;
+	for (int i = 0; i < maxX; i++ )
+	{
+		fZ = i * dx - fHalfWidth;
+		for (int j = 0; j < maxY; j++)
+		{
+			fX = j * dx - fHalfWidth;
+
+			GeometryVertexFmt geometry = geometryVertex[ i * maxX + j];
+			geometry.postion = XMFLOAT3(fX, .0f, fZ);
+		}
+	}
 }
