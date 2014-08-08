@@ -40,6 +40,8 @@ public:
 
 	void SetLocalTranslation(float x, float y, float z);
 
+	void GenerateGeometry(unsigned int dwWidth, unsigned int dwHeight);
+
 private:
     ID3D11Device*                   m_pD3d11Device;
     ID3D11DeviceContext*            m_pD3d11DeviceContext;
@@ -85,5 +87,10 @@ private:
 
 	XMFLOAT3					m_eyePos;
 	XMMATRIX					m_localTranslation;
+
+	// geometry
+	ID3D11Buffer*				m_pGeometryVertexBuffer;
+	unsigned int				m_dwGeometryWidth;
+	unsigned int				m_dwGeometryHeight;
 };
 
