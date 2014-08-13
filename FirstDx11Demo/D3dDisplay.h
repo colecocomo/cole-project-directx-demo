@@ -42,6 +42,8 @@ public:
 
 	void GenerateGeometry(unsigned int dwWidth, unsigned int dwHeight);
 
+	void DrawGeometry();
+
 private:
     ID3D11Device*                   m_pD3d11Device;
     ID3D11DeviceContext*            m_pD3d11DeviceContext;
