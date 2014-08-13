@@ -1996,6 +1996,7 @@ void CD3dDisplay::SetLocalTranslation( float x, float y, float z )
 
 void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight )
 {
+	HRESULT hr = S_OK;
 	m_dwGeometryWidth = dwWidth;
 	m_dwGeometryHeight = dwHeight;
 
@@ -2017,6 +2018,224 @@ void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight 
 
 			GeometryVertexFmt geometry = geometryVertex[ i * maxX + j];
 			geometry.postion = XMFLOAT3(fX, .0f, fZ);
+			geometry.normal = XMFLOAT3(.0f, 1.0f, .0f);
+			geometry.uv = XMFLOAT2(1.0/(float)i*dx, 1.0/(float)j*dx);
 		}
 	}
+
+	unsigned int dwIndexCnt = (2 * dwWidth - 1) * (2 * dwWidth - 1) * 2 * 3;
+	unsigned int* indices = new unsigned int[dwIndexCnt];
+	for (int i = 0; i < maxX; i++)
+	{
+		for (int j = 0; j < maxY; j++)
+		{
+			indices[]
+		}
+	}
+
+	D3D11_BUFFER_DESC bufferDesc;
+	ZeroMemory(&bufferDesc, sizeof(D3D11_BUFFER_DESC));
+	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	bufferDesc.StructureByteStride = sizeof(GeometryVertexFmt);
+	bufferDesc.ByteWidth = dwVertexCnt * sizeof(GeometryVertexFmt);
+
+	D3D11_SUBRESOURCE_DATA subResData;
+	ZeroMemory(&subResData, sizeof(D3D11_SUBRESOURCE_DATA));
+	subResData.pSysMem = geometryVertex;
+
+	hr = m_pD3d11Device->CreateBuffer(&bufferDesc, &subResData, &m_pGeometryVertexBuffer);
+	if (FAILED(hr))
+	{
+		SAFE_RELEASE(m_pGeometryVertexBuffer);
+		return;
+	}
+}
+
+void CD3dDisplay::DrawGeometry()
+{
+	HRESULT hr = S_OK;
+	ID3DBlob* pVsBuff = NULL;
+	ID3DBlob* pVsShaderError = NULL;
+	ID3DBlob* pPsBuff = NULL;
+	ID3DBlob* pPsShaderError = NULL;
+	ID3D11VertexShader* pVs = NULL;
+	ID3D11PixelShader* pPs = NULL;
+	ID3D11InputLayout* pInputLayout = NULL;
+	ID3D11RasterizerState* pRasterizerState = NULL;
+
+	hr = D3DX11CompileFromFile( _T("FX/Geometry.fx"),
+								0, 
+								NULL,
+								"VS_Main",
+								"vs_4_0",
+								0,
+								0,
+								NULL,
+								&pVsBuff,
+								&pVsShaderError,
+								NULL);
+	if (FAILED(hr))
+	{
+		void* str = pVsShaderError->GetBufferPointer();
+		wstring strError = AnsiToUnicode((char*)str);
+		OutputDebugString(strError.c_str());
+		return;
+	}
+
+	hr = m_pD3d11Device->CreateVertexShader(pVsBuff->GetBufferPointer(), pVsBuff->GetBufferSize(), NULL, &pVs);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	hr = D3DX11CompileFromFile( _T("FX/Geometry.fx"),
+								0, 
+								NULL,
+								"PS_Main",
+								"ps_4_0",
+								0,
+								0,
+								NULL,
+								&pPsBuff,
+								&pPsShaderError,
+								NULL);
+	if (FAILED(hr))
+	{
+		void* str = pPsShaderError->GetBufferPointer();
+		wstring strError = AnsiToUnicode((char*)str);
+		OutputDebugString(strError.c_str());
+		return;
+	}
+
+	hr = m_pD3d11Device->CreatePixelShader(pPsBuff->GetBufferPointer(), pPsBuff->GetBufferSize(), NULL, &pPs);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	D3D11_RASTERIZER_DESC rasterizerDesc;
+	ZeroMemory(&rasterizerDesc, sizeof(D3D11_RASTERIZER_DESC));
+	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
+	rasterizerDesc.CullMode = D3D11_CULL_BACK;
+	rasterizerDesc.FrontCounterClockwise = FALSE;
+	hr = m_pD3d11Device->CreateRasterizerState(&rasterizerDesc, &pRasterizerState);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	D3D11_INPUT_ELEMENT_DESC inputDesc[3];
+	ZeroMemory(&inputDesc, sizeof(inputDesc));
+	inputDesc[0].SemanticName = "POSITION";
+	inputDesc[0].InputSlot = 0;
+	inputDesc[0].AlignedByteOffset = 0;
+	inputDesc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	inputDesc[0].SemanticIndex = 0;
+	inputDesc[1].SemanticName = "NORMAL";
+	inputDesc[1].InputSlot = 0;
+	inputDesc[1].AlignedByteOffset = 12;
+	inputDesc[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	inputDesc[1].SemanticIndex = 0;
+	inputDesc[1].SemanticName = "TEXCOORD0";
+	inputDesc[1].InputSlot = 0;
+	inputDesc[1].AlignedByteOffset = 24;
+	inputDesc[1].Format = DXGI_FORMAT_R32G32_FLOAT;
+	inputDesc[1].SemanticIndex = 0;
+
+	hr = m_pD3d11Device->CreateInputLayout(	inputDesc,
+											2,
+											pVsBuff->GetBufferPointer(),
+											pVsBuff->GetBufferSize(),
+											&pInputLayout);
+	if (FAILED(hr))
+	{
+		return ;
+	}
+
+	XMMATRIX viewMatrix, projMatrix, worldMatrix, worldViewProjNormalMatrix;
+	ZeroMemory(&viewMatrix, sizeof(XMMATRIX));
+	ZeroMemory(&projMatrix, sizeof(XMMATRIX));
+	ZeroMemory(&worldMatrix, sizeof(XMMATRIX));
+	FXMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, 1.0f);
+	FXMVECTOR lookPos = XMVectorSet(.0f, .0f, .0f, 1.0f);
+	FXMVECTOR upDir = XMVectorSet(.0f, 1.0f, .0f, .0f);
+
+	viewMatrix = XMMatrixIdentity();
+	FXMVECTOR lookAtPos = XMVectorSet(.0f, .0f, .0f, 1.0f);
+	viewMatrix = XMMatrixLookAtLH(eyePos, lookAtPos, XMVectorSet(.0f, 1.0f, .0f, 1.0f));
+	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
+	projMatrix = XMMatrixTranspose(projMatrix);
+	worldMatrix = m_localTranslation;
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, -2.0f, 20.0f));
+	worldMatrix = XMMatrixTranspose(worldMatrix);
+
+	worldViewProjNormalMatrix = XMMatrixMultiply(worldMatrix, viewMatrix);
+	worldViewProjNormalMatrix = XMMatrixMultiply(worldViewProjNormalMatrix, projMatrix);
+	XMVECTOR determinant = XMMatrixDeterminant(worldViewProjNormalMatrix);
+	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldViewProjNormalMatrix);
+	worldViewProjNormalMatrix = XMMatrixTranspose(worldViewProjNormalMatrix);
+
+	ID3D11Buffer* pConstantBuffer = NULL;
+
+	ConstantBuffer constantBuffer;
+	constantBuffer.projMatrix = projMatrix;
+	constantBuffer.viewMatrix = viewMatrix;
+	constantBuffer.worldMatrix = worldMatrix;
+	constantBuffer.normalMatrix = worldViewProjNormalMatrix;
+	XMStoreFloat4(&constantBuffer.eyePos, eyePos);
+	constantBuffer.fElapseTime = (float)m_dwElapseTime;
+
+	D3D11_BUFFER_DESC buffDesc;
+	ZeroMemory(&buffDesc, sizeof(D3D11_BUFFER_DESC));
+	buffDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	buffDesc.ByteWidth = sizeof(ConstantBuffer);
+	buffDesc.Usage = D3D11_USAGE_DEFAULT;
+	D3D11_SUBRESOURCE_DATA subResourceData;
+	ZeroMemory(&subResourceData, sizeof(D3D11_SUBRESOURCE_DATA));
+	subResourceData.pSysMem = &constantBuffer;
+	hr = m_pD3d11Device->CreateBuffer(&buffDesc, &subResourceData, &pConstantBuffer);
+	if (FAILED(hr))
+	{
+		SAFE_RELEASE(pConstantBuffer);
+		return;
+	}
+
+	m_pD3d11DeviceContext->ClearDepthStencilView( m_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0 );
+	float colorArray[4] = {.0,.0,.0,.0};
+	m_pD3d11DeviceContext->ClearRenderTargetView(m_pRenderTargetView, colorArray);
+
+	m_pD3d11DeviceContext->VSSetConstantBuffers(0, 1, &pConstantBuffer);
+
+	m_pD3d11DeviceContext->IASetInputLayout(pInputLayout);
+	UINT dwStrides = sizeof(VertexFmtWithNormal);
+	UINT dwOffsets = 0;
+	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_pSkullVertexBuffer, &dwStrides, &dwOffsets);
+	//m_pD3d11DeviceContext->IASetIndexBuffer(m_pSkullIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_pD3d11DeviceContext->VSSetShader(pVs, 0, 0);
+	m_pD3d11DeviceContext->PSSetShader(pPs, 0, 0);
+	m_pD3d11DeviceContext->RSSetState(pRasterizerState);
+
+	D3D11_VIEWPORT vp;
+	vp.Height = (FLOAT)m_dwHeight;
+	vp.Width = (FLOAT)m_dwWidth;
+	vp.TopLeftX = .0f;
+	vp.TopLeftY = .0f;
+	vp.MinDepth = .0f;
+	vp.MaxDepth = 1.0f;
+	m_pD3d11DeviceContext->RSSetViewports(1, &vp);
+
+	//m_pD3d11DeviceContext->DrawIndexed(3 * m_dwSkullIndexCnt, 0, 0);
+	m_pD3d11DeviceContext->draw
+	m_pDXGISwapChain->Present(0, 0);
+
+	SAFE_RELEASE(pVsBuff);
+	SAFE_RELEASE(pVsShaderError);
+	SAFE_RELEASE(pPsBuff);
+	SAFE_RELEASE(pPsShaderError);
+	SAFE_RELEASE(pVs);
+	SAFE_RELEASE(pPs);
+	SAFE_RELEASE(pInputLayout);
+	SAFE_RELEASE(pConstantBuffer);
 }
