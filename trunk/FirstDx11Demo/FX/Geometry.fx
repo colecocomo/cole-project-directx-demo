@@ -25,10 +25,20 @@ struct PS_Input
 
 PS_Input VS_Main( VS_Input vertex )
 {
+	PS_Input ps;
 }
 
 
 float4 PS_Main( PS_Input frag ) : SV_TARGET
 {
-	
+	//float4 ret = tex2D();
+}
+
+technique11 Geometry
+{
+	pass p0
+	{
+		SetVertexShader(vs_4_0, VS_Main());
+		SetPixelShader(ps_4_0, PS_Main());
+	}
 }

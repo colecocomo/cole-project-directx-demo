@@ -58,8 +58,11 @@ m_pSkullIndexBuffer(0),
 m_dwSkullVertexCnt(0),
 m_dwSkullIndexCnt(0),
 m_pGeometryVertexBuffer(0),
+m_pGeometryIndexBuffer(0),
+m_pGeometryEffect(0),
 m_dwGeometryHeight(0),
-m_dwGeometryWidth(0)
+m_dwGeometryWidth(0),
+m_dwGeometryIdxCnt(0)
 {
 	m_vObjModelIndexBuff.clear();
 	m_vObjModelVertexBuff.clear();
@@ -2023,13 +2026,19 @@ void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight 
 		}
 	}
 
-	unsigned int dwIndexCnt = (2 * dwWidth - 1) * (2 * dwWidth - 1) * 2 * 3;
+	unsigned int dwIndexCnt = m_dwGeometryIdxCnt = (2 * dwWidth - 1) * (2 * dwWidth - 1) * 2 * 3;
 	unsigned int* indices = new unsigned int[dwIndexCnt];
-	for (int i = 0; i < maxX; i++)
+	for (int i = 0; i < maxY; i++)
 	{
-		for (int j = 0; j < maxY; j++)
+		for (int j = 0; j < maxX; j++)
 		{
-			indices[]
+			indices[3 * i + j] = j;
+			indices[3 * i + j + 1] = j + 1;
+			indices[3 * i + j + 2] =  (i + 1) * maxX + j;
+
+			indices[3 * i + j + 3] = j + 1;
+			indices[3 * i + j + 4] = (i + 1) * maxX + j;
+			indices[3 * i + j + 5] = (i + 1) * maxX + j + 1;
 		}
 	}
 
@@ -2050,6 +2059,23 @@ void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight 
 		SAFE_RELEASE(m_pGeometryVertexBuffer);
 		return;
 	}
+
+	ZeroMemory(&bufferDesc, sizeof(D3D11_BUFFER_DESC));
+	bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	bufferDesc.StructureByteStride = sizeof(unsigned int);
+	bufferDesc.ByteWidth = dwIndexCnt * sizeof(unsigned int);
+
+	ZeroMemory(&subResData, sizeof(D3D11_SUBRESOURCE_DATA));
+	subResData.pSysMem = indices;
+
+	hr = m_pD3d11Device->CreateBuffer(&bufferDesc, &subResData, &m_pGeometryIndexBuffer);
+	if (FAILED(hr))
+	{
+		SAFE_RELEASE(m_pGeometryVertexBuffer);
+		SAFE_RELEASE(m_pGeometryIndexBuffer);
+		return;
+	}
 }
 
 void CD3dDisplay::DrawGeometry()
@@ -2059,10 +2085,46 @@ void CD3dDisplay::DrawGeometry()
 	ID3DBlob* pVsShaderError = NULL;
 	ID3DBlob* pPsBuff = NULL;
 	ID3DBlob* pPsShaderError = NULL;
+	ID3DBlob* pEffectBuff = NULL;
+	ID3DBlob* pEffectError = NULL;
 	ID3D11VertexShader* pVs = NULL;
 	ID3D11PixelShader* pPs = NULL;
 	ID3D11InputLayout* pInputLayout = NULL;
 	ID3D11RasterizerState* pRasterizerState = NULL;
+
+	hr = D3DX11CompileFromFile( _T("FX/Geometry.fx"),
+								0,
+								0,
+								0,
+								"fx_4_0",
+								0,
+								0,
+								0,
+								&pEffectBuff,
+								&pEffectError,
+								0);
+	if (FAILED(hr))
+	{
+		void* str = pEffectError->GetBufferPointer();
+		wstring strError = AnsiToUnicode((char*)str);
+		OutputDebugString(strError.c_str());
+		SAFE_RELEASE(pEffectBuff);
+		SAFE_RELEASE(pEffectError);
+		return;
+	}
+
+	hr = D3DX11CreateEffectFromMemory(	pEffectBuff->GetBufferPointer(), 
+										pEffectBuff->GetBufferSize(),
+										0,
+										m_pD3d11Device,
+										&m_pGeometryEffect);
+	if (FAILED(hr))
+	{
+		SAFE_RELEASE(m_pGeometryEffect);
+		SAFE_RELEASE(pEffectBuff);
+		SAFE_RELEASE(pEffectError);
+		return;
+	}
 
 	hr = D3DX11CompileFromFile( _T("FX/Geometry.fx"),
 								0, 
@@ -2080,6 +2142,10 @@ void CD3dDisplay::DrawGeometry()
 		void* str = pVsShaderError->GetBufferPointer();
 		wstring strError = AnsiToUnicode((char*)str);
 		OutputDebugString(strError.c_str());
+		SAFE_RELEASE(pEffectBuff);
+		SAFE_RELEASE(pEffectError);
+		SAFE_RELEASE(pVsBuff);
+		SAFE_RELEASE(pVsShaderError);
 		return;
 	}
 
@@ -2105,6 +2171,12 @@ void CD3dDisplay::DrawGeometry()
 		void* str = pPsShaderError->GetBufferPointer();
 		wstring strError = AnsiToUnicode((char*)str);
 		OutputDebugString(strError.c_str());
+		SAFE_RELEASE(pEffectBuff);
+		SAFE_RELEASE(pEffectError);
+		SAFE_RELEASE(pVsBuff);
+		SAFE_RELEASE(pVsShaderError);
+		SAFE_RELEASE(pPsBuff);
+		SAFE_RELEASE(pPsShaderError);
 		return;
 	}
 
@@ -2176,28 +2248,54 @@ void CD3dDisplay::DrawGeometry()
 	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldViewProjNormalMatrix);
 	worldViewProjNormalMatrix = XMMatrixTranspose(worldViewProjNormalMatrix);
 
-	ID3D11Buffer* pConstantBuffer = NULL;
+	ID3DX11EffectMatrixVariable* pWorldMatrix = m_pGeometryEffect->GetVariableByName("worldMatrix")->AsMatrix();
+	if (pWorldMatrix)
+	{
+		pWorldMatrix->SetMatrix((float*)&worldMatrix);
+	}
 
-	ConstantBuffer constantBuffer;
-	constantBuffer.projMatrix = projMatrix;
-	constantBuffer.viewMatrix = viewMatrix;
-	constantBuffer.worldMatrix = worldMatrix;
-	constantBuffer.normalMatrix = worldViewProjNormalMatrix;
-	XMStoreFloat4(&constantBuffer.eyePos, eyePos);
-	constantBuffer.fElapseTime = (float)m_dwElapseTime;
+	ID3DX11EffectMatrixVariable* pViewMatrix = m_pGeometryEffect->GetVariableByName("viewMatrix")->AsMatrix();
+	if (pViewMatrix)
+	{
+		pViewMatrix->SetMatrix((float*)&viewMatrix);
+	}
 
-	D3D11_BUFFER_DESC buffDesc;
-	ZeroMemory(&buffDesc, sizeof(D3D11_BUFFER_DESC));
-	buffDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	buffDesc.ByteWidth = sizeof(ConstantBuffer);
-	buffDesc.Usage = D3D11_USAGE_DEFAULT;
-	D3D11_SUBRESOURCE_DATA subResourceData;
-	ZeroMemory(&subResourceData, sizeof(D3D11_SUBRESOURCE_DATA));
-	subResourceData.pSysMem = &constantBuffer;
-	hr = m_pD3d11Device->CreateBuffer(&buffDesc, &subResourceData, &pConstantBuffer);
+	ID3DX11EffectMatrixVariable* pProjMatrix = m_pGeometryEffect->GetVariableByName("projMatrix")->AsMatrix();
+	if (pProjMatrix)
+	{
+		pProjMatrix->SetMatrix((float*)&projMatrix);
+	}
+
+	ID3DX11EffectMatrixVariable* pWorldViewProjNormalMatrix = m_pGeometryEffect->GetVariableByName("normalMatrix")->AsMatrix();
+	if (pWorldViewProjNormalMatrix)
+	{
+		pWorldViewProjNormalMatrix->SetMatrix((float*)&worldViewProjNormalMatrix);
+	}
+
+	ID3DX11EffectScalarVariable* pElapseTime = m_pGeometryEffect->GetVariableByName("elapseTime")->AsScalar();
+	if (pElapseTime)
+	{
+		pElapseTime->SetFloat((float)m_dwElapseTime);
+	}
+
+	ID3DX11EffectVectorVariable* pEyePos = m_pGeometryEffect->GetVariableByName("eyePos")->AsVector();
+	if (pEyePos)
+	{
+		pEyePos->SetFloatVector((float*)&eyePos);
+	}
+
+	ID3D11SamplerState* pSamplerState = NULL;
+	D3D11_SAMPLER_DESC sampleDesc;
+	ZeroMemory(&sampleDesc, sizeof(D3D11_SAMPLER_DESC));
+	sampleDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampleDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampleDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampleDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sampleDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+	hr = m_pD3d11Device->CreateSamplerState(&sampleDesc, &pSamplerState);
 	if (FAILED(hr))
 	{
-		SAFE_RELEASE(pConstantBuffer);
+		SAFE_RELEASE(pSamplerState);
 		return;
 	}
 
@@ -2205,16 +2303,14 @@ void CD3dDisplay::DrawGeometry()
 	float colorArray[4] = {.0,.0,.0,.0};
 	m_pD3d11DeviceContext->ClearRenderTargetView(m_pRenderTargetView, colorArray);
 
-	m_pD3d11DeviceContext->VSSetConstantBuffers(0, 1, &pConstantBuffer);
-
 	m_pD3d11DeviceContext->IASetInputLayout(pInputLayout);
 	UINT dwStrides = sizeof(VertexFmtWithNormal);
 	UINT dwOffsets = 0;
 	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_pSkullVertexBuffer, &dwStrides, &dwOffsets);
-	//m_pD3d11DeviceContext->IASetIndexBuffer(m_pSkullIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_pD3d11DeviceContext->VSSetShader(pVs, 0, 0);
 	m_pD3d11DeviceContext->PSSetShader(pPs, 0, 0);
+	m_pD3d11DeviceContext->PSSetSamplers(0, 1, &pSamplerState);
 	m_pD3d11DeviceContext->RSSetState(pRasterizerState);
 
 	D3D11_VIEWPORT vp;
@@ -2226,8 +2322,17 @@ void CD3dDisplay::DrawGeometry()
 	vp.MaxDepth = 1.0f;
 	m_pD3d11DeviceContext->RSSetViewports(1, &vp);
 
-	//m_pD3d11DeviceContext->DrawIndexed(3 * m_dwSkullIndexCnt, 0, 0);
-	m_pD3d11DeviceContext->draw
+	ID3DX11EffectTechnique* pEffectTechnique = m_pGeometryEffect->GetTechniqueByName("Geometry");
+	if (pEffectTechnique)
+	{
+		ID3DX11EffectPass* pEffectPass = pEffectTechnique->GetPassByName("p0");
+		if (pEffectPass)
+		{
+			pEffectPass->Apply(0, m_pD3d11DeviceContext);
+		}
+	}
+
+	m_pD3d11DeviceContext->DrawIndexed(m_dwGeometryIdxCnt, 0, 0);
 	m_pDXGISwapChain->Present(0, 0);
 
 	SAFE_RELEASE(pVsBuff);
@@ -2237,5 +2342,7 @@ void CD3dDisplay::DrawGeometry()
 	SAFE_RELEASE(pVs);
 	SAFE_RELEASE(pPs);
 	SAFE_RELEASE(pInputLayout);
-	SAFE_RELEASE(pConstantBuffer);
+	SAFE_RELEASE(pEffectBuff);
+	SAFE_RELEASE(pEffectError);
+	SAFE_RELEASE(pSamplerState);
 }

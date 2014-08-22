@@ -92,7 +92,10 @@ private:
 
 	// geometry
 	ID3D11Buffer*				m_pGeometryVertexBuffer;
+	ID3D11Buffer*				m_pGeometryIndexBuffer;
+	ID3DX11Effect*				m_pGeometryEffect;
 	unsigned int				m_dwGeometryWidth;
 	unsigned int				m_dwGeometryHeight;
+	unsigned int				m_dwGeometryIdxCnt;
 };
 
