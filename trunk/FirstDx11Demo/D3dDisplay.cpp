@@ -305,7 +305,10 @@ bool CD3dDisplay::InitDevice3D(HWND hWnd)
 		return false;
 	}
 
-    return LoadModelFromFile(_T(".\\RES\\ObjModel\\skull.txt"));
+	GenerateGeometry(500, 500);
+
+    //return LoadModelFromFile(_T(".\\RES\\ObjModel\\skull.txt"));
+	return true;
 }
 
 bool CD3dDisplay::InitDevice2D( HWND hWnd )
@@ -2011,7 +2014,9 @@ void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight 
 
 	GeometryVertexFmt* geometryVertex = new GeometryVertexFmt[dwVertexCnt];
 	unsigned int maxX, maxY = 2 * dwWidth;
+	maxX = maxY;
 	float fX, fZ = .0f;
+	fX = fZ;
 	for (int i = 0; i < maxX; i++ )
 	{
 		fZ = i * dx - fHalfWidth;
@@ -2019,10 +2024,10 @@ void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight 
 		{
 			fX = j * dx - fHalfWidth;
 
-			GeometryVertexFmt geometry = geometryVertex[ i * maxX + j];
-			geometry.postion = XMFLOAT3(fX, .0f, fZ);
-			geometry.normal = XMFLOAT3(.0f, 1.0f, .0f);
-			geometry.uv = XMFLOAT2(1.0/(float)i*dx, 1.0/(float)j*dx);
+			GeometryVertexFmt* geometry = &(geometryVertex[ i * maxX + j]);
+			geometry->postion = XMFLOAT3(fX, .0f, fZ);
+			geometry->normal = XMFLOAT3(.0f, 1.0f, .0f);
+			geometry->uv = XMFLOAT2((float)i * 1.0/(float)maxX, (float)j * 1.0/(float)maxY);
 		}
 	}
 
@@ -2096,7 +2101,7 @@ void CD3dDisplay::DrawGeometry()
 								0,
 								0,
 								0,
-								"fx_4_0",
+								"fx_5_0",
 								0,
 								0,
 								0,
@@ -2209,14 +2214,14 @@ void CD3dDisplay::DrawGeometry()
 	inputDesc[1].AlignedByteOffset = 12;
 	inputDesc[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
 	inputDesc[1].SemanticIndex = 0;
-	inputDesc[1].SemanticName = "TEXCOORD0";
-	inputDesc[1].InputSlot = 0;
-	inputDesc[1].AlignedByteOffset = 24;
-	inputDesc[1].Format = DXGI_FORMAT_R32G32_FLOAT;
-	inputDesc[1].SemanticIndex = 0;
+	inputDesc[2].SemanticName = "TEXCOORD0";
+	inputDesc[2].InputSlot = 0;
+	inputDesc[2].AlignedByteOffset = 24;
+	inputDesc[2].Format = DXGI_FORMAT_R32G32_FLOAT;
+	inputDesc[2].SemanticIndex = 0;
 
 	hr = m_pD3d11Device->CreateInputLayout(	inputDesc,
-											2,
+											3,
 											pVsBuff->GetBufferPointer(),
 											pVsBuff->GetBufferSize(),
 											&pInputLayout);
