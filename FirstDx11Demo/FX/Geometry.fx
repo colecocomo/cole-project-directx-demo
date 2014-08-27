@@ -26,19 +26,29 @@ struct PS_Input
 PS_Input VS_Main( VS_Input vertex )
 {
 	PS_Input ps;
+	ps.pos = mul(vertex.pos, worldMatrix);
+	ps.pos = mul(ps.pos, viewMatrix);
+	ps.pos = mul(ps.pos, projMatrix);
+	ps.normal = mul(vertex.normal, normalMatrix);
+	ps.eyePos = mul(eyePos, worldMatrix);
+	ps.eyePos = mul(ps.eyePos, viewMatrix);
+	ps.eyePos = mul(ps.eyePos, projMatrix);
+
+	return ps;
 }
 
 
 float4 PS_Main( PS_Input frag ) : SV_TARGET
 {
 	//float4 ret = tex2D();
+	return float4(.0f, .0f, .0f, .0f);
 }
 
 technique11 Geometry
 {
 	pass p0
 	{
-		SetVertexShader(vs_4_0, VS_Main());
-		SetPixelShader(ps_4_0, PS_Main());
+		SetVertexShader( CompileShader( vs_4_0, VS_Main() ) );
+		SetPixelShader( CompileShader( ps_4_0, PS_Main() ) );
 	}
 }
