@@ -1,3 +1,6 @@
+Texture2D GeometryColorMap : register(t0);
+SamplerState GeometrySampler : register(s0);
+ 
 cbuffer constantBuffer : register(b0)
 {
 	matrix worldMatrix;
