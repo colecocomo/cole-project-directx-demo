@@ -305,7 +305,7 @@ bool CD3dDisplay::InitDevice3D(HWND hWnd)
 		return false;
 	}
 
-	GenerateGeometry(500, 500);
+	GenerateGeometry(50, 50);
 
     //return LoadModelFromFile(_T(".\\RES\\ObjModel\\skull.txt"));
 	return true;
@@ -2033,17 +2033,19 @@ void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight 
 
 	unsigned int dwIndexCnt = m_dwGeometryIdxCnt = (2 * dwWidth - 1) * (2 * dwWidth - 1) * 2 * 3;
 	unsigned int* indices = new unsigned int[dwIndexCnt];
-	for (int i = 0; i < maxY; i++)
-	{
-		for (int j = 0; j < maxX; j++)
-		{
-			indices[3 * i + j] = j;
-			indices[3 * i + j + 1] = j + 1;
-			indices[3 * i + j + 2] =  (i + 1) * maxX + j;
 
-			indices[3 * i + j + 3] = j + 1;
-			indices[3 * i + j + 4] = (i + 1) * maxX + j;
-			indices[3 * i + j + 5] = (i + 1) * maxX + j + 1;
+	int idx = 0;
+	for (int i = 0; i < (maxY-1); i++)
+	{
+		for (int j = 0; j < (maxX-1); j++)
+		{
+			indices[idx++] = j;
+			indices[idx++] = j + 1;
+			indices[idx++] =  (i + 1) * maxX + j;
+
+			indices[idx++] = j + 1;
+			indices[idx++] = (i + 1) * maxX + j;
+			indices[idx++] = (i + 1) * maxX + j + 1;
 		}
 	}
 
@@ -2096,6 +2098,7 @@ void CD3dDisplay::DrawGeometry()
 	ID3D11PixelShader* pPs = NULL;
 	ID3D11InputLayout* pInputLayout = NULL;
 	ID3D11RasterizerState* pRasterizerState = NULL;
+	ID3D11ShaderResourceView* pShaderResView = NULL;
 
 	hr = D3DX11CompileFromFile( _T("FX/Geometry.fx"),
 								0,
@@ -2113,9 +2116,7 @@ void CD3dDisplay::DrawGeometry()
 		void* str = pEffectError->GetBufferPointer();
 		wstring strError = AnsiToUnicode((char*)str);
 		OutputDebugString(strError.c_str());
-		SAFE_RELEASE(pEffectBuff);
-		SAFE_RELEASE(pEffectError);
-		return;
+		goto error;
 	}
 
 	hr = D3DX11CreateEffectFromMemory(	pEffectBuff->GetBufferPointer(), 
@@ -2125,10 +2126,7 @@ void CD3dDisplay::DrawGeometry()
 										&m_pGeometryEffect);
 	if (FAILED(hr))
 	{
-		SAFE_RELEASE(m_pGeometryEffect);
-		SAFE_RELEASE(pEffectBuff);
-		SAFE_RELEASE(pEffectError);
-		return;
+		goto error;
 	}
 
 	hr = D3DX11CompileFromFile( _T("FX/Geometry.fx"),
@@ -2147,11 +2145,7 @@ void CD3dDisplay::DrawGeometry()
 		void* str = pVsShaderError->GetBufferPointer();
 		wstring strError = AnsiToUnicode((char*)str);
 		OutputDebugString(strError.c_str());
-		SAFE_RELEASE(pEffectBuff);
-		SAFE_RELEASE(pEffectError);
-		SAFE_RELEASE(pVsBuff);
-		SAFE_RELEASE(pVsShaderError);
-		return;
+		goto error;
 	}
 
 	hr = m_pD3d11Device->CreateVertexShader(pVsBuff->GetBufferPointer(), pVsBuff->GetBufferSize(), NULL, &pVs);
@@ -2176,13 +2170,7 @@ void CD3dDisplay::DrawGeometry()
 		void* str = pPsShaderError->GetBufferPointer();
 		wstring strError = AnsiToUnicode((char*)str);
 		OutputDebugString(strError.c_str());
-		SAFE_RELEASE(pEffectBuff);
-		SAFE_RELEASE(pEffectError);
-		SAFE_RELEASE(pVsBuff);
-		SAFE_RELEASE(pVsShaderError);
-		SAFE_RELEASE(pPsBuff);
-		SAFE_RELEASE(pPsShaderError);
-		return;
+		goto error;
 	}
 
 	hr = m_pD3d11Device->CreatePixelShader(pPsBuff->GetBufferPointer(), pPsBuff->GetBufferSize(), NULL, &pPs);
@@ -2202,28 +2190,60 @@ void CD3dDisplay::DrawGeometry()
 		return;
 	}
 
+	ID3DX11EffectTechnique* pEffectTechnique = m_pGeometryEffect->GetTechniqueByName("Geometry");
+	if (!pEffectTechnique)
+	{
+		goto error;
+	}
+	ID3DX11EffectPass* pEffectPass = pEffectTechnique->GetPassByName("p0");
+	if (!pEffectPass)
+	{
+		goto error;
+	}
+
+	hr = D3DX11CreateShaderResourceViewFromFile(m_pD3d11Device,
+												_T(""),
+												NULL,
+												NULL,
+												&pShaderResView,
+												&hr);
+	if (FAILED(hr))
+	{
+		goto error;
+	}
+
+	D3DX11_EFFECT_SHADER_DESC effectShaderDesc;
+	D3DX11_PASS_SHADER_DESC passShaderDesc;
+	ZeroMemory(&effectShaderDesc, sizeof(D3DX11_EFFECT_SHADER_DESC));
+	ZeroMemory(&passShaderDesc, sizeof(D3DX11_PASS_SHADER_DESC));
+	pEffectPass->GetVertexShaderDesc(&passShaderDesc);
+	passShaderDesc.pShaderVariable->GetShaderDesc(0, &effectShaderDesc);
+
 	D3D11_INPUT_ELEMENT_DESC inputDesc[3];
 	ZeroMemory(&inputDesc, sizeof(inputDesc));
-	inputDesc[0].SemanticName = "POSITION";
-	inputDesc[0].InputSlot = 0;
-	inputDesc[0].AlignedByteOffset = 0;
-	inputDesc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-	inputDesc[0].SemanticIndex = 0;
-	inputDesc[1].SemanticName = "NORMAL";
+ 	inputDesc[0].SemanticName = "POSITION";
+ 	inputDesc[0].InputSlot = 0;
+ 	inputDesc[0].AlignedByteOffset = 0;
+ 	inputDesc[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+ 	inputDesc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+ 	inputDesc[0].SemanticIndex = 0;
+ 	inputDesc[1].SemanticName = "NORMAL";
 	inputDesc[1].InputSlot = 0;
-	inputDesc[1].AlignedByteOffset = 12;
+	inputDesc[1].AlignedByteOffset = 16;
 	inputDesc[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	inputDesc[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 	inputDesc[1].SemanticIndex = 0;
-	inputDesc[2].SemanticName = "TEXCOORD0";
+ 	inputDesc[2].SemanticName = "TEXCOORD";
 	inputDesc[2].InputSlot = 0;
-	inputDesc[2].AlignedByteOffset = 24;
+	inputDesc[2].AlignedByteOffset = 28;
 	inputDesc[2].Format = DXGI_FORMAT_R32G32_FLOAT;
+	inputDesc[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 	inputDesc[2].SemanticIndex = 0;
 
 	hr = m_pD3d11Device->CreateInputLayout(	inputDesc,
 											3,
-											pVsBuff->GetBufferPointer(),
-											pVsBuff->GetBufferSize(),
+											effectShaderDesc.pBytecode,
+											effectShaderDesc.BytecodeLength,
 											&pInputLayout);
 	if (FAILED(hr))
 	{
@@ -2234,6 +2254,7 @@ void CD3dDisplay::DrawGeometry()
 	ZeroMemory(&viewMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&projMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&worldMatrix, sizeof(XMMATRIX));
+	m_eyePos = XMFLOAT3(1.0f, 1.0f, -1.0f);
 	FXMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, 1.0f);
 	FXMVECTOR lookPos = XMVectorSet(.0f, .0f, .0f, 1.0f);
 	FXMVECTOR upDir = XMVectorSet(.0f, 1.0f, .0f, .0f);
@@ -2289,6 +2310,12 @@ void CD3dDisplay::DrawGeometry()
 		pEyePos->SetFloatVector((float*)&eyePos);
 	}
 
+	ID3DX11EffectShaderResourceVariable* pShaderVar = m_pGeometryEffect->GetVariableByName("GeometryColorMap")->AsShaderResource();
+	if (pShaderVar)
+	{
+		pShaderVar->SetResource(pShaderResView);
+	}
+
 	ID3D11SamplerState* pSamplerState = NULL;
 	D3D11_SAMPLER_DESC sampleDesc;
 	ZeroMemory(&sampleDesc, sizeof(D3D11_SAMPLER_DESC));
@@ -2300,8 +2327,7 @@ void CD3dDisplay::DrawGeometry()
 	hr = m_pD3d11Device->CreateSamplerState(&sampleDesc, &pSamplerState);
 	if (FAILED(hr))
 	{
-		SAFE_RELEASE(pSamplerState);
-		return;
+		goto error;
 	}
 
 	m_pD3d11DeviceContext->ClearDepthStencilView( m_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0 );
@@ -2311,7 +2337,8 @@ void CD3dDisplay::DrawGeometry()
 	m_pD3d11DeviceContext->IASetInputLayout(pInputLayout);
 	UINT dwStrides = sizeof(VertexFmtWithNormal);
 	UINT dwOffsets = 0;
-	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_pSkullVertexBuffer, &dwStrides, &dwOffsets);
+	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_pGeometryVertexBuffer, &dwStrides, &dwOffsets);
+	m_pD3d11DeviceContext->IASetIndexBuffer(m_pGeometryIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_pD3d11DeviceContext->VSSetShader(pVs, 0, 0);
 	m_pD3d11DeviceContext->PSSetShader(pPs, 0, 0);
@@ -2327,19 +2354,12 @@ void CD3dDisplay::DrawGeometry()
 	vp.MaxDepth = 1.0f;
 	m_pD3d11DeviceContext->RSSetViewports(1, &vp);
 
-	ID3DX11EffectTechnique* pEffectTechnique = m_pGeometryEffect->GetTechniqueByName("Geometry");
-	if (pEffectTechnique)
-	{
-		ID3DX11EffectPass* pEffectPass = pEffectTechnique->GetPassByName("p0");
-		if (pEffectPass)
-		{
-			pEffectPass->Apply(0, m_pD3d11DeviceContext);
-		}
-	}
+	pEffectPass->Apply(0, m_pD3d11DeviceContext);
 
 	m_pD3d11DeviceContext->DrawIndexed(m_dwGeometryIdxCnt, 0, 0);
 	m_pDXGISwapChain->Present(0, 0);
 
+error:
 	SAFE_RELEASE(pVsBuff);
 	SAFE_RELEASE(pVsShaderError);
 	SAFE_RELEASE(pPsBuff);
@@ -2350,4 +2370,5 @@ void CD3dDisplay::DrawGeometry()
 	SAFE_RELEASE(pEffectBuff);
 	SAFE_RELEASE(pEffectError);
 	SAFE_RELEASE(pSamplerState);
+	SAFE_RELEASE(pShaderResView);
 }
