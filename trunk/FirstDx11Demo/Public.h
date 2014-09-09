@@ -16,6 +16,7 @@
 	if( p )\
 	{\
 	p->Release(); \
+	p = NULL;\
 	}
 #endif
 
@@ -65,7 +66,7 @@ struct VertexFmtWithNormal
 {
 	XMFLOAT3 position;
 	XMFLOAT3 normal;
-	//XMFLOAT2 uv;
+	XMFLOAT2 uv;
 };
 
 struct GeometryVertexFmt

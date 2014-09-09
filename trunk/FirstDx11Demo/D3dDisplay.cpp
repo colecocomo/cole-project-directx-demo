@@ -7,6 +7,7 @@
 #include <sstream>
 
 using std::wstring;
+using std::wstringstream;
 
 wstring AnsiToUnicode(const char* pSrc)
 {
@@ -2017,6 +2018,7 @@ void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight 
 	maxX = maxY;
 	float fX, fZ = .0f;
 	fX = fZ;
+	wstringstream ss;
 	for (int i = 0; i < maxX; i++ )
 	{
 		fZ = i * dx - fHalfWidth;
@@ -2026,6 +2028,9 @@ void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight 
 
 			GeometryVertexFmt* geometry = &(geometryVertex[ i * maxX + j]);
 			geometry->postion = XMFLOAT3(fX, .0f, fZ);
+			/*ss.str(_T(""));
+			ss<<fX<<" "<<.0<<" "<<fZ<<"\n";
+			OutputDebugString(ss.str().c_str());*/
 			geometry->normal = XMFLOAT3(.0f, 1.0f, .0f);
 			geometry->uv = XMFLOAT2((float)i * 1.0/(float)maxX, (float)j * 1.0/(float)maxY);
 		}
@@ -2039,13 +2044,21 @@ void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight 
 	{
 		for (int j = 0; j < (maxX-1); j++)
 		{
-			indices[idx++] = j;
-			indices[idx++] = j + 1;
+			indices[idx++] = i * maxX + j;
+			indices[idx++] = i * maxX + j + 1;
 			indices[idx++] =  (i + 1) * maxX + j;
 
-			indices[idx++] = j + 1;
+			/*ss.str(_T(""));
+			ss<<j<<" "<<j + 1<<" "<<(i + 1) * maxX + j<<"\n";
+			OutputDebugString(ss.str().c_str());*/
+
+			indices[idx++] = i * maxX + j + 1;
 			indices[idx++] = (i + 1) * maxX + j;
 			indices[idx++] = (i + 1) * maxX + j + 1;
+
+			/*ss.str(_T(""));
+			ss<<j + 1<<" "<<(i + 1) * maxX + j<<" "<<(i + 1) * maxX + j + 1<<"\n";
+			OutputDebugString(ss.str().c_str());*/
 		}
 	}
 
@@ -2099,6 +2112,7 @@ void CD3dDisplay::DrawGeometry()
 	ID3D11InputLayout* pInputLayout = NULL;
 	ID3D11RasterizerState* pRasterizerState = NULL;
 	ID3D11ShaderResourceView* pShaderResView = NULL;
+	ID3D11SamplerState* pSamplerState = NULL;
 
 	hr = D3DX11CompileFromFile( _T("FX/Geometry.fx"),
 								0,
@@ -2202,7 +2216,7 @@ void CD3dDisplay::DrawGeometry()
 	}
 
 	hr = D3DX11CreateShaderResourceViewFromFile(m_pD3d11Device,
-												_T(""),
+												_T("RES/ObjModel/grass.jpg"),
 												NULL,
 												NULL,
 												&pShaderResView,
@@ -2224,18 +2238,18 @@ void CD3dDisplay::DrawGeometry()
  	inputDesc[0].SemanticName = "POSITION";
  	inputDesc[0].InputSlot = 0;
  	inputDesc[0].AlignedByteOffset = 0;
- 	inputDesc[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+ 	inputDesc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
  	inputDesc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
  	inputDesc[0].SemanticIndex = 0;
  	inputDesc[1].SemanticName = "NORMAL";
 	inputDesc[1].InputSlot = 0;
-	inputDesc[1].AlignedByteOffset = 16;
+	inputDesc[1].AlignedByteOffset = 12;
 	inputDesc[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
 	inputDesc[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 	inputDesc[1].SemanticIndex = 0;
  	inputDesc[2].SemanticName = "TEXCOORD";
 	inputDesc[2].InputSlot = 0;
-	inputDesc[2].AlignedByteOffset = 28;
+	inputDesc[2].AlignedByteOffset = 24;
 	inputDesc[2].Format = DXGI_FORMAT_R32G32_FLOAT;
 	inputDesc[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 	inputDesc[2].SemanticIndex = 0;
@@ -2247,14 +2261,14 @@ void CD3dDisplay::DrawGeometry()
 											&pInputLayout);
 	if (FAILED(hr))
 	{
-		return ;
+		goto error;
 	}
 
 	XMMATRIX viewMatrix, projMatrix, worldMatrix, worldViewProjNormalMatrix;
 	ZeroMemory(&viewMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&projMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&worldMatrix, sizeof(XMMATRIX));
-	m_eyePos = XMFLOAT3(1.0f, 1.0f, -1.0f);
+	m_eyePos = XMFLOAT3(100.0f, 100.0f, 200.0f);
 	FXMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, 1.0f);
 	FXMVECTOR lookPos = XMVectorSet(.0f, .0f, .0f, 1.0f);
 	FXMVECTOR upDir = XMVectorSet(.0f, 1.0f, .0f, .0f);
@@ -2262,10 +2276,11 @@ void CD3dDisplay::DrawGeometry()
 	viewMatrix = XMMatrixIdentity();
 	FXMVECTOR lookAtPos = XMVectorSet(.0f, .0f, .0f, 1.0f);
 	viewMatrix = XMMatrixLookAtLH(eyePos, lookAtPos, XMVectorSet(.0f, 1.0f, .0f, 1.0f));
+	//viewMatrix = XMMatrixIdentity();
 	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
 	projMatrix = XMMatrixTranspose(projMatrix);
 	worldMatrix = m_localTranslation;
-	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, -2.0f, 20.0f));
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, .0f, .0f));
 	worldMatrix = XMMatrixTranspose(worldMatrix);
 
 	worldViewProjNormalMatrix = XMMatrixMultiply(worldMatrix, viewMatrix);
@@ -2316,7 +2331,6 @@ void CD3dDisplay::DrawGeometry()
 		pShaderVar->SetResource(pShaderResView);
 	}
 
-	ID3D11SamplerState* pSamplerState = NULL;
 	D3D11_SAMPLER_DESC sampleDesc;
 	ZeroMemory(&sampleDesc, sizeof(D3D11_SAMPLER_DESC));
 	sampleDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
