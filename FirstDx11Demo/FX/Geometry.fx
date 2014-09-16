@@ -22,7 +22,7 @@ struct PS_Input
 {
 	float4 pos : SV_POSITION;
 	float3 normal : NORMAL;
-	float4 eyePos : POSITION;
+	//float4 eyePos : POSITION;
 	float2 tex0 : TEXCOORD0;
 };
 
@@ -30,14 +30,13 @@ struct PS_Input
 PS_Input VS_Main( VS_Input vertex )
 {
 	PS_Input ps;
-	//ps.pos = mul(vertex.pos, worldMatrix);
-	//ps.pos = mul(ps.pos, viewMatrix);
-	//ps.pos = mul(ps.pos, projMatrix);
-	ps.pos = vertex.pos;
+	ps.pos = mul(vertex.pos, worldMatrix);
+	ps.pos = mul(ps.pos, viewMatrix);
+	ps.pos = mul(ps.pos, projMatrix);
 	ps.normal = mul(vertex.normal, normalMatrix);
-	ps.eyePos = mul(eyePos, worldMatrix);
-	ps.eyePos = mul(ps.eyePos, viewMatrix);
-	ps.eyePos = mul(ps.eyePos, projMatrix);
+	//ps.eyePos = mul(eyePos, worldMatrix);
+	//ps.eyePos = mul(ps.eyePos, viewMatrix);
+	//ps.eyePos = mul(ps.eyePos, projMatrix);
 	ps.tex0 = vertex.tex0;
 
 	return ps;
@@ -46,7 +45,9 @@ PS_Input VS_Main( VS_Input vertex )
 
 float4 PS_Main( PS_Input frag ) : SV_TARGET
 {
-	return GeometryColorMap.Sample(GeometrySampler, frag.tex0);;
+	//return GeometryColorMap.Sample(GeometrySampler, frag.tex0);
+	return float4(1.0f, 1.0f, 1.0f, 1.0f);
+
 }
 
 technique11 Geometry
