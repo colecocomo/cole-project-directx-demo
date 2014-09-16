@@ -306,7 +306,7 @@ bool CD3dDisplay::InitDevice3D(HWND hWnd)
 		return false;
 	}
 
-	GenerateGeometry(50, 50);
+	GenerateGeometry(2, 2);
 
     //return LoadModelFromFile(_T(".\\RES\\ObjModel\\skull.txt"));
 	return true;
@@ -2027,11 +2027,11 @@ void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight 
 			fX = j * dx - fHalfWidth;
 
 			GeometryVertexFmt* geometry = &(geometryVertex[ i * maxX + j]);
-			geometry->postion = XMFLOAT3(fX, .0f, fZ);
+			geometry->postion = XMFLOAT3(fX, fZ, .0f);
 			/*ss.str(_T(""));
 			ss<<fX<<" "<<.0<<" "<<fZ<<"\n";
 			OutputDebugString(ss.str().c_str());*/
-			geometry->normal = XMFLOAT3(.0f, 1.0f, .0f);
+			geometry->normal = XMFLOAT3(.0f, .0f, 1.0f);
 			geometry->uv = XMFLOAT2((float)i * 1.0/(float)maxX, (float)j * 1.0/(float)maxY);
 		}
 	}
@@ -2048,17 +2048,9 @@ void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight 
 			indices[idx++] = i * maxX + j + 1;
 			indices[idx++] =  (i + 1) * maxX + j;
 
-			/*ss.str(_T(""));
-			ss<<j<<" "<<j + 1<<" "<<(i + 1) * maxX + j<<"\n";
-			OutputDebugString(ss.str().c_str());*/
-
 			indices[idx++] = i * maxX + j + 1;
-			indices[idx++] = (i + 1) * maxX + j;
 			indices[idx++] = (i + 1) * maxX + j + 1;
-
-			/*ss.str(_T(""));
-			ss<<j + 1<<" "<<(i + 1) * maxX + j<<" "<<(i + 1) * maxX + j + 1<<"\n";
-			OutputDebugString(ss.str().c_str());*/
+			indices[idx++] = (i + 1) * maxX + j;
 		}
 	}
 
@@ -2197,7 +2189,7 @@ void CD3dDisplay::DrawGeometry()
 	ZeroMemory(&rasterizerDesc, sizeof(D3D11_RASTERIZER_DESC));
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
 	rasterizerDesc.CullMode = D3D11_CULL_BACK;
-	rasterizerDesc.FrontCounterClockwise = FALSE;
+	rasterizerDesc.FrontCounterClockwise = TRUE;
 	hr = m_pD3d11Device->CreateRasterizerState(&rasterizerDesc, &pRasterizerState);
 	if (FAILED(hr))
 	{
@@ -2268,15 +2260,14 @@ void CD3dDisplay::DrawGeometry()
 	ZeroMemory(&viewMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&projMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&worldMatrix, sizeof(XMMATRIX));
-	m_eyePos = XMFLOAT3(100.0f, 100.0f, 200.0f);
-	FXMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, 1.0f);
-	FXMVECTOR lookPos = XMVectorSet(.0f, .0f, .0f, 1.0f);
+	m_eyePos = XMFLOAT3(.0f, .0f, 2.0f);
+	FXMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, .0f);
+	FXMVECTOR lookPos = XMVectorSet(.0f, .0f, .0f, .0f);
 	FXMVECTOR upDir = XMVectorSet(.0f, 1.0f, .0f, .0f);
 
 	viewMatrix = XMMatrixIdentity();
-	FXMVECTOR lookAtPos = XMVectorSet(.0f, .0f, .0f, 1.0f);
-	viewMatrix = XMMatrixLookAtLH(eyePos, lookAtPos, XMVectorSet(.0f, 1.0f, .0f, 1.0f));
-	//viewMatrix = XMMatrixIdentity();
+	viewMatrix = XMMatrixLookAtLH(eyePos, lookPos, upDir);
+	viewMatrix = XMMatrixIdentity();
 	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
 	projMatrix = XMMatrixTranspose(projMatrix);
 	worldMatrix = m_localTranslation;
