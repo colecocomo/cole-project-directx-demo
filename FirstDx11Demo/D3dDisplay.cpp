@@ -306,7 +306,7 @@ bool CD3dDisplay::InitDevice3D(HWND hWnd)
 		return false;
 	}
 
-	GenerateGeometry(2, 2);
+	GenerateGeometry(50, 50);
 
     //return LoadModelFromFile(_T(".\\RES\\ObjModel\\skull.txt"));
 	return true;
@@ -2027,11 +2027,11 @@ void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight 
 			fX = j * dx - fHalfWidth;
 
 			GeometryVertexFmt* geometry = &(geometryVertex[ i * maxX + j]);
-			geometry->postion = XMFLOAT3(fX, fZ, .0f);
+			geometry->postion = XMFLOAT3(fX, .0f, fZ);
 			/*ss.str(_T(""));
 			ss<<fX<<" "<<.0<<" "<<fZ<<"\n";
 			OutputDebugString(ss.str().c_str());*/
-			geometry->normal = XMFLOAT3(.0f, .0f, 1.0f);
+			geometry->normal = XMFLOAT3(.0f, 1.0f, .0f);
 			geometry->uv = XMFLOAT2((float)i * 1.0/(float)maxX, (float)j * 1.0/(float)maxY);
 		}
 	}
@@ -2104,6 +2104,7 @@ void CD3dDisplay::DrawGeometry()
 	ID3D11InputLayout* pInputLayout = NULL;
 	ID3D11RasterizerState* pRasterizerState = NULL;
 	ID3D11ShaderResourceView* pShaderResView = NULL;
+	ID3D11ShaderResourceView* pShaderResView1 = NULL;
 	ID3D11SamplerState* pSamplerState = NULL;
 
 	hr = D3DX11CompileFromFile( _T("FX/Geometry.fx"),
@@ -2190,6 +2191,7 @@ void CD3dDisplay::DrawGeometry()
 	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
 	rasterizerDesc.CullMode = D3D11_CULL_BACK;
 	rasterizerDesc.FrontCounterClockwise = TRUE;
+	//rasterizerDesc.FillMode = D3D11_FILL_WIREFRAME;
 	hr = m_pD3d11Device->CreateRasterizerState(&rasterizerDesc, &pRasterizerState);
 	if (FAILED(hr))
 	{
@@ -2208,10 +2210,21 @@ void CD3dDisplay::DrawGeometry()
 	}
 
 	hr = D3DX11CreateShaderResourceViewFromFile(m_pD3d11Device,
-												_T("RES/ObjModel/grass.jpg"),
+												_T("RES/ObjModel/water1.dds"),
 												NULL,
 												NULL,
 												&pShaderResView,
+												&hr);
+	if (FAILED(hr))
+	{
+		goto error;
+	}
+
+	hr = D3DX11CreateShaderResourceViewFromFile(m_pD3d11Device,
+												_T("RES/ObjModel/water2.dds"),
+												NULL,
+												NULL,
+												&pShaderResView1,
 												&hr);
 	if (FAILED(hr))
 	{
@@ -2256,29 +2269,28 @@ void CD3dDisplay::DrawGeometry()
 		goto error;
 	}
 
-	XMMATRIX viewMatrix, projMatrix, worldMatrix, worldViewProjNormalMatrix;
+	XMMATRIX viewMatrix, projMatrix, worldMatrix, worldViewProjNormalMatrix, texScaleMatrix;
 	ZeroMemory(&viewMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&projMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&worldMatrix, sizeof(XMMATRIX));
-	m_eyePos = XMFLOAT3(.0f, .0f, 2.0f);
+	m_eyePos = XMFLOAT3(20.0f, 45.0f, .0f);
 	FXMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, .0f);
 	FXMVECTOR lookPos = XMVectorSet(.0f, .0f, .0f, .0f);
 	FXMVECTOR upDir = XMVectorSet(.0f, 1.0f, .0f, .0f);
 
 	viewMatrix = XMMatrixIdentity();
 	viewMatrix = XMMatrixLookAtLH(eyePos, lookPos, upDir);
-	viewMatrix = XMMatrixIdentity();
 	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
-	projMatrix = XMMatrixTranspose(projMatrix);
 	worldMatrix = m_localTranslation;
 	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, .0f, .0f));
-	worldMatrix = XMMatrixTranspose(worldMatrix);
 
 	worldViewProjNormalMatrix = XMMatrixMultiply(worldMatrix, viewMatrix);
 	worldViewProjNormalMatrix = XMMatrixMultiply(worldViewProjNormalMatrix, projMatrix);
 	XMVECTOR determinant = XMMatrixDeterminant(worldViewProjNormalMatrix);
 	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldViewProjNormalMatrix);
-	worldViewProjNormalMatrix = XMMatrixTranspose(worldViewProjNormalMatrix);
+
+	texScaleMatrix = XMMatrixIdentity();
+	texScaleMatrix = XMMatrixScaling(3.0f, 3.0f, .0f);
 
 	ID3DX11EffectMatrixVariable* pWorldMatrix = m_pGeometryEffect->GetVariableByName("worldMatrix")->AsMatrix();
 	if (pWorldMatrix)
@@ -2304,10 +2316,22 @@ void CD3dDisplay::DrawGeometry()
 		pWorldViewProjNormalMatrix->SetMatrix((float*)&worldViewProjNormalMatrix);
 	}
 
+	ID3DX11EffectMatrixVariable* pTexScaleMatrix = m_pGeometryEffect->GetVariableByName("texScaleMatrix")->AsMatrix();
+	if (pTexScaleMatrix)
+	{
+		pTexScaleMatrix->SetMatrix((float*)&texScaleMatrix);
+	}
+
 	ID3DX11EffectScalarVariable* pElapseTime = m_pGeometryEffect->GetVariableByName("elapseTime")->AsScalar();
 	if (pElapseTime)
 	{
 		pElapseTime->SetFloat((float)m_dwElapseTime);
+	}
+
+	ID3DX11EffectScalarVariable* pDeltaTime = m_pGeometryEffect->GetVariableByName("deltaTime")->AsScalar();
+	if (pDeltaTime)
+	{
+		pDeltaTime->SetFloat((float)m_dwDeltaTime);
 	}
 
 	ID3DX11EffectVectorVariable* pEyePos = m_pGeometryEffect->GetVariableByName("eyePos")->AsVector();
@@ -2322,17 +2346,29 @@ void CD3dDisplay::DrawGeometry()
 		pShaderVar->SetResource(pShaderResView);
 	}
 
+	ID3DX11EffectShaderResourceVariable* pShaderVar1 = m_pGeometryEffect->GetVariableByName("GeometryColorMap1")->AsShaderResource();
+	if (pShaderVar1)
+	{
+		pShaderVar1->SetResource(pShaderResView1);
+	}
+
 	D3D11_SAMPLER_DESC sampleDesc;
 	ZeroMemory(&sampleDesc, sizeof(D3D11_SAMPLER_DESC));
-	sampleDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampleDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	sampleDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampleDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	sampleDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	sampleDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 	sampleDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 	sampleDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
 	hr = m_pD3d11Device->CreateSamplerState(&sampleDesc, &pSamplerState);
 	if (FAILED(hr))
 	{
 		goto error;
+	}
+
+	ID3DX11EffectSamplerVariable* pSamplerVar = m_pGeometryEffect->GetVariableByName("GeometrySampler")->AsSampler();
+	if (pSamplerVar)
+	{
+		//pSamplerVar->SetSampler(1, pSamplerState);
 	}
 
 	m_pD3d11DeviceContext->ClearDepthStencilView( m_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0 );
@@ -2347,7 +2383,7 @@ void CD3dDisplay::DrawGeometry()
 	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_pD3d11DeviceContext->VSSetShader(pVs, 0, 0);
 	m_pD3d11DeviceContext->PSSetShader(pPs, 0, 0);
-	m_pD3d11DeviceContext->PSSetSamplers(0, 1, &pSamplerState);
+	//m_pD3d11DeviceContext->PSSetSamplers(0, 1, &pSamplerState);
 	m_pD3d11DeviceContext->RSSetState(pRasterizerState);
 
 	D3D11_VIEWPORT vp;
@@ -2376,4 +2412,5 @@ error:
 	SAFE_RELEASE(pEffectError);
 	SAFE_RELEASE(pSamplerState);
 	SAFE_RELEASE(pShaderResView);
+	SAFE_RELEASE(pShaderResView1);
 }
