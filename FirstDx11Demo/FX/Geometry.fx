@@ -1,5 +1,6 @@
-Texture2D GeometryColorMap : register(t0);
-Texture2D GeometryColorMap1 : register(t1);
+Texture2D WaterColorMap : register(t0);
+Texture2D WaterColorMap1 : register(t1);
+Texture2D GeometryColorMap : register(t2);
 SamplerState GeometrySampler : register(s0);
 
 SamplerState samWarp
@@ -44,6 +45,32 @@ PS_Input VS_Main( VS_Input vertex )
 	ps.pos = mul(ps.pos, viewMatrix);
 	ps.pos = mul(ps.pos, projMatrix);
 	ps.normal = mul(vertex.normal, normalMatrix);
+	ps.normal = normalize(ps.normal);
+	//ps.eyePos = mul(eyePos, worldMatrix);
+	//ps.eyePos = mul(ps.eyePos, viewMatrix);
+	//ps.eyePos = mul(ps.eyePos, projMatrix);
+	ps.tex0 = vertex.tex0;
+	ps.tex0 = mul(ps.tex0, texScaleMatrix).xy;
+
+	return ps;
+}
+
+
+float4 PS_Main( PS_Input frag ) : SV_TARGET
+{
+	float4 light = float4(1.0f, 1.0f, 1.0f, .0f);
+	float3 lightDirection = float3(.0f, 1.0f, .0f);
+	float factor = dot(frag.normal, lightDirection);
+	return GeometryColorMap.Sample(samWarp, frag.tex0) * light * factor;
+}
+
+PS_Input Water_VS_Main( VS_Input vertex )
+{
+	PS_Input ps;
+	ps.pos = mul(vertex.pos, worldMatrix);
+	ps.pos = mul(ps.pos, viewMatrix);
+	ps.pos = mul(ps.pos, projMatrix);
+	ps.normal = mul(vertex.normal, normalMatrix);
 	//ps.eyePos = mul(eyePos, worldMatrix);
 	//ps.eyePos = mul(ps.eyePos, viewMatrix);
 	//ps.eyePos = mul(ps.eyePos, projMatrix);
@@ -60,10 +87,9 @@ PS_Input VS_Main( VS_Input vertex )
 }
 
 
-float4 PS_Main( PS_Input frag ) : SV_TARGET
+float4 Water_PS_Main( PS_Input frag ) : SV_TARGET
 {
-	return GeometryColorMap.Sample(samWarp, frag.tex0) * GeometryColorMap1.Sample(samWarp, frag.tex0);
-	//return float4(1.0f, 1.0f, 1.0f, 1.0f);
+	return WaterColorMap.Sample(samWarp, frag.tex0) * WaterColorMap1.Sample(samWarp, frag.tex0);
 }
 
 technique11 Geometry
@@ -72,5 +98,11 @@ technique11 Geometry
 	{
 		SetVertexShader( CompileShader( vs_4_0, VS_Main() ) );
 		SetPixelShader( CompileShader( ps_4_0, PS_Main() ) );
+	}
+
+	pass p1
+	{
+		SetVertexShader( CompileShader( vs_4_0, Water_VS_Main() ) );
+		SetPixelShader( CompileShader( ps_4_0, Water_PS_Main() ) );
 	}
 }
