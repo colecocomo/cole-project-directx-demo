@@ -2027,11 +2027,16 @@ void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight 
 			fX = j * dx - fHalfWidth;
 
 			GeometryVertexFmt* geometry = &(geometryVertex[ i * maxX + j]);
-			geometry->postion = XMFLOAT3(fX, .0f, fZ);
-			/*ss.str(_T(""));
-			ss<<fX<<" "<<.0<<" "<<fZ<<"\n";
-			OutputDebugString(ss.str().c_str());*/
-			geometry->normal = XMFLOAT3(.0f, 1.0f, .0f);
+			geometry->postion = XMFLOAT3(fX, 0.3f*( fZ*sinf(0.1f*fX) + fX*cosf(0.1f*fZ) ), fZ);
+			
+			XMFLOAT3 n(	-0.03f*fZ*cosf(0.1f*fX) - 0.3f*cosf(0.1f*fZ),
+						1.0f,
+						-0.3f*sinf(0.1f*fX) + 0.03f*fX*sinf(0.1f*fZ));
+
+			XMVECTOR unitNormal = XMVector3Normalize(XMLoadFloat3(&n));
+			XMStoreFloat3(&n, unitNormal);
+
+			geometry->normal = n;
 			geometry->uv = XMFLOAT2((float)i * 1.0/(float)maxX, (float)j * 1.0/(float)maxY);
 		}
 	}
@@ -2105,6 +2110,7 @@ void CD3dDisplay::DrawGeometry()
 	ID3D11RasterizerState* pRasterizerState = NULL;
 	ID3D11ShaderResourceView* pShaderResView = NULL;
 	ID3D11ShaderResourceView* pShaderResView1 = NULL;
+	ID3D11ShaderResourceView* pShaderResView2 = NULL;
 	ID3D11SamplerState* pSamplerState = NULL;
 
 	hr = D3DX11CompileFromFile( _T("FX/Geometry.fx"),
@@ -2231,6 +2237,17 @@ void CD3dDisplay::DrawGeometry()
 		goto error;
 	}
 
+	hr = D3DX11CreateShaderResourceViewFromFile(m_pD3d11Device,
+												_T("RES/ObjModel/grass.dds"),
+												NULL,
+												NULL,
+												&pShaderResView2,
+												&hr);
+	if (FAILED(hr))
+	{
+		goto error;
+	}
+
 	D3DX11_EFFECT_SHADER_DESC effectShaderDesc;
 	D3DX11_PASS_SHADER_DESC passShaderDesc;
 	ZeroMemory(&effectShaderDesc, sizeof(D3DX11_EFFECT_SHADER_DESC));
@@ -2340,16 +2357,22 @@ void CD3dDisplay::DrawGeometry()
 		pEyePos->SetFloatVector((float*)&eyePos);
 	}
 
-	ID3DX11EffectShaderResourceVariable* pShaderVar = m_pGeometryEffect->GetVariableByName("GeometryColorMap")->AsShaderResource();
+	ID3DX11EffectShaderResourceVariable* pShaderVar = m_pGeometryEffect->GetVariableByName("WaterColorMap")->AsShaderResource();
 	if (pShaderVar)
 	{
 		pShaderVar->SetResource(pShaderResView);
 	}
 
-	ID3DX11EffectShaderResourceVariable* pShaderVar1 = m_pGeometryEffect->GetVariableByName("GeometryColorMap1")->AsShaderResource();
+	ID3DX11EffectShaderResourceVariable* pShaderVar1 = m_pGeometryEffect->GetVariableByName("WaterColorMap1")->AsShaderResource();
 	if (pShaderVar1)
 	{
 		pShaderVar1->SetResource(pShaderResView1);
+	}
+
+	ID3DX11EffectShaderResourceVariable* pShaderVar3 = m_pGeometryEffect->GetVariableByName("GeometryColorMap")->AsShaderResource();
+	if (pShaderVar3)
+	{
+		pShaderVar3->SetResource(pShaderResView2);
 	}
 
 	D3D11_SAMPLER_DESC sampleDesc;
