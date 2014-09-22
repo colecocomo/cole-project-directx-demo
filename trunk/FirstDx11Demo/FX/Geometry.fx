@@ -45,6 +45,7 @@ PS_Input VS_Main( VS_Input vertex )
 	ps.pos = mul(ps.pos, viewMatrix);
 	ps.pos = mul(ps.pos, projMatrix);
 	ps.normal = mul(vertex.normal, normalMatrix);
+	//ps.normal = vertex.normal;
 	ps.normal = normalize(ps.normal);
 	//ps.eyePos = mul(eyePos, worldMatrix);
 	//ps.eyePos = mul(ps.eyePos, viewMatrix);
@@ -59,7 +60,7 @@ PS_Input VS_Main( VS_Input vertex )
 float4 PS_Main( PS_Input frag ) : SV_TARGET
 {
 	float4 light = float4(1.0f, 1.0f, 1.0f, .0f);
-	float3 lightDirection = float3(.0f, 1.0f, .0f);
+	float3 lightDirection = float3(-1.0f, 1.0f, -1.0f);
 	float factor = dot(frag.normal, lightDirection);
 	return GeometryColorMap.Sample(samWarp, frag.tex0) * light * factor;
 }
@@ -70,18 +71,19 @@ PS_Input Water_VS_Main( VS_Input vertex )
 	ps.pos = mul(vertex.pos, worldMatrix);
 	ps.pos = mul(ps.pos, viewMatrix);
 	ps.pos = mul(ps.pos, projMatrix);
-	ps.normal = mul(vertex.normal, normalMatrix);
+	//ps.normal = mul(vertex.normal, normalMatrix);
+	ps.normal = vertex.normal;
 	//ps.eyePos = mul(eyePos, worldMatrix);
 	//ps.eyePos = mul(ps.eyePos, viewMatrix);
 	//ps.eyePos = mul(ps.eyePos, projMatrix);
 	ps.tex0 = vertex.tex0;
-	ps.tex0.y += 0.00005f * elapseTime;
-	ps.tex0.x += 0.0001f * elapseTime;
+	//ps.tex0.y += 0.00005f * elapseTime;
+	//ps.tex0.x += 0.0001f * elapseTime;
 	//matrix texAniMatrix = mul(float4(ps.tex0, .0f, .0f), texScaleMatrix);
-	matrix texAniMatrix = texScaleMatrix;
-	texAniMatrix._m21 = ps.tex0.x;
-	texAniMatrix._m22 = ps.tex0.y;
-	ps.tex0 = mul(ps.tex0, texAniMatrix).xy;
+	//matrix texAniMatrix = texScaleMatrix;
+	//texAniMatrix._m21 = ps.tex0.x;
+	//texAniMatrix._m22 = ps.tex0.y;
+	ps.tex0 = mul(ps.tex0, texScaleMatrix).xy;
 
 	return ps;
 }
