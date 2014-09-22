@@ -63,7 +63,12 @@ m_pGeometryIndexBuffer(0),
 m_pGeometryEffect(0),
 m_dwGeometryHeight(0),
 m_dwGeometryWidth(0),
-m_dwGeometryIdxCnt(0)
+m_dwGeometryIdxCnt(0),
+m_pWaterVertexBuffer(0),
+m_pWaterIndexBuffer(0),
+m_dwWaterHeight(0),
+m_dwWaterWidth(0),
+m_dwWaterIdxCnt(0)
 {
 	m_vObjModelIndexBuff.clear();
 	m_vObjModelVertexBuff.clear();
@@ -92,6 +97,12 @@ CD3dDisplay::~CD3dDisplay(void)
 
 	SAFE_RELEASE(m_pSkullIndexBuffer);
 	SAFE_RELEASE(m_pSkullVertexBuffer);
+
+	SAFE_RELEASE(m_pGeometryEffect);
+	SAFE_RELEASE(m_pGeometryIndexBuffer);
+	SAFE_RELEASE(m_pGeometryVertexBuffer);
+	SAFE_RELEASE(m_pWaterIndexBuffer);
+	SAFE_RELEASE(m_pWaterVertexBuffer);
 
 	BufferVectorIter iter = m_vObjModelIndexBuff.begin();
 	while(iter != m_vObjModelIndexBuff.end())
@@ -306,7 +317,8 @@ bool CD3dDisplay::InitDevice3D(HWND hWnd)
 		return false;
 	}
 
-	GenerateGeometry(50, 50);
+	GenerateGeometry(500, 500);
+	GenerateWaterMesh(500, 500);
 
     //return LoadModelFromFile(_T(".\\RES\\ObjModel\\skull.txt"));
 	return true;
@@ -2001,6 +2013,92 @@ void CD3dDisplay::SetLocalTranslation( float x, float y, float z )
 	m_localTranslation = XMMatrixMultiply(m_localTranslation, localTrans);
 }
 
+void CD3dDisplay::GenerateWaterMesh(unsigned int dwWidth, unsigned int dwHeight)
+{
+	HRESULT hr = S_OK;
+	m_dwWaterWidth = dwWidth;
+	m_dwWaterHeight = dwHeight;
+
+	unsigned int dwVertexCnt  = 4 * dwWidth * dwWidth;
+	float fHalfWidth = 0.5f * dwWidth;
+	float fHalfHeight = 0.5f * dwHeight;
+	float dx = 0.5f;
+	float dy = (float)dwHeight / (float)(2 * dwWidth);
+
+	GeometryVertexFmt* geometryVertex = new GeometryVertexFmt[dwVertexCnt];
+	unsigned int maxX, maxY = 2 * dwWidth;
+	maxX = maxY;
+	float fX, fZ = .0f;
+	fX = fZ;
+	wstringstream ss;
+	for (int i = 0; i < maxX; i++ )
+	{
+		fZ = i * dx - fHalfWidth;
+		for (int j = 0; j < maxY; j++)
+		{
+			fX = j * dx - fHalfWidth;
+
+			GeometryVertexFmt* geometry = &(geometryVertex[ i * maxX + j]);
+			geometry->postion = XMFLOAT3(fX, .0f, fZ);
+			geometry->normal = XMFLOAT3(.0f, 1.0f, .0f);;
+			geometry->uv = XMFLOAT2((float)i * 1.0/(float)maxX, (float)j * 1.0/(float)maxY);
+		}
+	}
+
+	unsigned int dwIndexCnt = m_dwWaterIdxCnt = (2 * dwWidth - 1) * (2 * dwWidth - 1) * 2 * 3;
+	unsigned int* indices = new unsigned int[dwIndexCnt];
+
+	int idx = 0;
+	for (int i = 0; i < (maxY-1); i++)
+	{
+		for (int j = 0; j < (maxX-1); j++)
+		{
+			indices[idx++] = i * maxX + j;
+			indices[idx++] = i * maxX + j + 1;
+			indices[idx++] =  (i + 1) * maxX + j;
+
+			indices[idx++] = i * maxX + j + 1;
+			indices[idx++] = (i + 1) * maxX + j + 1;
+			indices[idx++] = (i + 1) * maxX + j;
+		}
+	}
+
+	D3D11_BUFFER_DESC bufferDesc;
+	ZeroMemory(&bufferDesc, sizeof(D3D11_BUFFER_DESC));
+	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	bufferDesc.StructureByteStride = sizeof(GeometryVertexFmt);
+	bufferDesc.ByteWidth = dwVertexCnt * sizeof(GeometryVertexFmt);
+
+	D3D11_SUBRESOURCE_DATA subResData;
+	ZeroMemory(&subResData, sizeof(D3D11_SUBRESOURCE_DATA));
+	subResData.pSysMem = geometryVertex;
+
+	hr = m_pD3d11Device->CreateBuffer(&bufferDesc, &subResData, &m_pWaterVertexBuffer);
+	if (FAILED(hr))
+	{
+		SAFE_RELEASE(m_pWaterVertexBuffer);
+		return;
+	}
+
+	ZeroMemory(&bufferDesc, sizeof(D3D11_BUFFER_DESC));
+	bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	bufferDesc.StructureByteStride = sizeof(unsigned int);
+	bufferDesc.ByteWidth = dwIndexCnt * sizeof(unsigned int);
+
+	ZeroMemory(&subResData, sizeof(D3D11_SUBRESOURCE_DATA));
+	subResData.pSysMem = indices;
+
+	hr = m_pD3d11Device->CreateBuffer(&bufferDesc, &subResData, &m_pWaterIndexBuffer);
+	if (FAILED(hr))
+	{
+		SAFE_RELEASE(m_pWaterVertexBuffer);
+		SAFE_RELEASE(m_pWaterIndexBuffer);
+		return;
+	}
+}
+
 void CD3dDisplay::GenerateGeometry( unsigned int dwWidth, unsigned int dwHeight )
 {
 	HRESULT hr = S_OK;
@@ -2290,7 +2388,7 @@ void CD3dDisplay::DrawGeometry()
 	ZeroMemory(&viewMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&projMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&worldMatrix, sizeof(XMMATRIX));
-	m_eyePos = XMFLOAT3(20.0f, 45.0f, .0f);
+	m_eyePos = XMFLOAT3(100.0f, 70.0f, .0f);
 	FXMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, .0f);
 	FXMVECTOR lookPos = XMVectorSet(.0f, .0f, .0f, .0f);
 	FXMVECTOR upDir = XMVectorSet(.0f, 1.0f, .0f, .0f);
@@ -2302,9 +2400,12 @@ void CD3dDisplay::DrawGeometry()
 	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, .0f, .0f));
 
 	worldViewProjNormalMatrix = XMMatrixMultiply(worldMatrix, viewMatrix);
-	worldViewProjNormalMatrix = XMMatrixMultiply(worldViewProjNormalMatrix, projMatrix);
+	//worldViewProjNormalMatrix = XMMatrixMultiply(worldViewProjNormalMatrix, projMatrix);
 	XMVECTOR determinant = XMMatrixDeterminant(worldViewProjNormalMatrix);
+	XMMATRIX tmp = worldViewProjNormalMatrix;
 	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldViewProjNormalMatrix);
+	tmp = XMMatrixMultiply(tmp, worldViewProjNormalMatrix);
+	worldViewProjNormalMatrix = XMMatrixTranspose(worldViewProjNormalMatrix);
 
 	texScaleMatrix = XMMatrixIdentity();
 	texScaleMatrix = XMMatrixScaling(3.0f, 3.0f, .0f);
@@ -2404,10 +2505,6 @@ void CD3dDisplay::DrawGeometry()
 	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_pGeometryVertexBuffer, &dwStrides, &dwOffsets);
 	m_pD3d11DeviceContext->IASetIndexBuffer(m_pGeometryIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_pD3d11DeviceContext->VSSetShader(pVs, 0, 0);
-	m_pD3d11DeviceContext->PSSetShader(pPs, 0, 0);
-	//m_pD3d11DeviceContext->PSSetSamplers(0, 1, &pSamplerState);
-	m_pD3d11DeviceContext->RSSetState(pRasterizerState);
 
 	D3D11_VIEWPORT vp;
 	vp.Height = (FLOAT)m_dwHeight;
@@ -2421,6 +2518,84 @@ void CD3dDisplay::DrawGeometry()
 	pEffectPass->Apply(0, m_pD3d11DeviceContext);
 
 	m_pD3d11DeviceContext->DrawIndexed(m_dwGeometryIdxCnt, 0, 0);
+
+	// render water
+	//pEffectPass = pEffectTechnique->GetPassByName("p1");
+	//if (!pEffectPass)
+	//{
+	//	goto error;
+	//}
+
+	//pWorldMatrix = m_pGeometryEffect->GetVariableByName("worldMatrix")->AsMatrix();
+	//if (pWorldMatrix)
+	//{
+	//	pWorldMatrix->SetMatrix((float*)&worldMatrix);
+	//}
+
+	//pViewMatrix = m_pGeometryEffect->GetVariableByName("viewMatrix")->AsMatrix();
+	//if (pViewMatrix)
+	//{
+	//	pViewMatrix->SetMatrix((float*)&viewMatrix);
+	//}
+
+	//pProjMatrix = m_pGeometryEffect->GetVariableByName("projMatrix")->AsMatrix();
+	//if (pProjMatrix)
+	//{
+	//	pProjMatrix->SetMatrix((float*)&projMatrix);
+	//}
+
+	//pWorldViewProjNormalMatrix = m_pGeometryEffect->GetVariableByName("normalMatrix")->AsMatrix();
+	//if (pWorldViewProjNormalMatrix)
+	//{
+	//	pWorldViewProjNormalMatrix->SetMatrix((float*)&worldViewProjNormalMatrix);
+	//}
+
+	//pTexScaleMatrix = m_pGeometryEffect->GetVariableByName("texScaleMatrix")->AsMatrix();
+	//if (pTexScaleMatrix)
+	//{
+	//	pTexScaleMatrix->SetMatrix((float*)&texScaleMatrix);
+	//}
+
+	//pElapseTime = m_pGeometryEffect->GetVariableByName("elapseTime")->AsScalar();
+	//if (pElapseTime)
+	//{
+	//	pElapseTime->SetFloat((float)m_dwElapseTime);
+	//}
+
+	//pDeltaTime = m_pGeometryEffect->GetVariableByName("deltaTime")->AsScalar();
+	//if (pDeltaTime)
+	//{
+	//	pDeltaTime->SetFloat((float)m_dwDeltaTime);
+	//}
+
+	//pEyePos = m_pGeometryEffect->GetVariableByName("eyePos")->AsVector();
+	//if (pEyePos)
+	//{
+	//	pEyePos->SetFloatVector((float*)&eyePos);
+	//}
+
+	//pShaderVar = m_pGeometryEffect->GetVariableByName("WaterColorMap")->AsShaderResource();
+	//if (pShaderVar)
+	//{
+	//	pShaderVar->SetResource(pShaderResView);
+	//}
+
+	//pShaderVar1 = m_pGeometryEffect->GetVariableByName("WaterColorMap1")->AsShaderResource();
+	//if (pShaderVar1)
+	//{
+	//	pShaderVar1->SetResource(pShaderResView1);
+	//}
+
+	//dwStrides = sizeof(VertexFmtWithNormal);
+	//dwOffsets = 0;
+	//m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_pWaterVertexBuffer, &dwStrides, &dwOffsets);
+	//m_pD3d11DeviceContext->IASetIndexBuffer(m_pWaterIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	//m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	//pEffectPass->Apply(0, m_pD3d11DeviceContext);
+
+	////m_pD3d11DeviceContext->DrawIndexed(m_dwWaterIdxCnt, 0, 0);
+
 	m_pDXGISwapChain->Present(0, 0);
 
 error:

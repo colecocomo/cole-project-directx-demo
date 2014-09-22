@@ -41,6 +41,7 @@ public:
 	void SetLocalTranslation(float x, float y, float z);
 
 	void GenerateGeometry(unsigned int dwWidth, unsigned int dwHeight);
+	void GenerateWaterMesh(unsigned int dwWidth, unsigned int dwHeight);
 
 	void DrawGeometry();
 
@@ -97,5 +98,10 @@ private:
 	unsigned int				m_dwGeometryWidth;
 	unsigned int				m_dwGeometryHeight;
 	unsigned int				m_dwGeometryIdxCnt;
+	ID3D11Buffer*				m_pWaterVertexBuffer;
+	ID3D11Buffer*				m_pWaterIndexBuffer;
+	unsigned int				m_dwWaterWidth;
+	unsigned int				m_dwWaterHeight;
+	unsigned int				m_dwWaterIdxCnt;
 };
 
