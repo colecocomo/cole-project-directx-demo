@@ -20,6 +20,18 @@ BlendState blend
 	BlendOpAlpha[0] = ADD;
 	RenderTargetWriteMask[0] = 0xf;
 };
+
+BlendState noBlend
+{
+	BlendEnable[0] = FALSE;
+	SrcBlend[0] = SRC_COLOR;
+	DestBlend[0] = DEST_COLOR;
+	BlendOp[0] = ADD;
+	SrcBlendAlpha[0] = ZERO;
+	DestBlendAlpha[0] = ZERO;
+	BlendOpAlpha[0] = ADD;
+	RenderTargetWriteMask[0] = 0xf;
+};
  
 cbuffer constantBuffer : register(b0)
 {
@@ -60,7 +72,7 @@ PS_Input VS_Main( VS_Input vertex )
 	ps.normal = normalize(ps.normal);
 	ps.eyePos = mul(eyePos, worldMatrix);
 	ps.eyePos = mul(ps.eyePos, viewMatrix);
-	ps.eyePos = mul(ps.eyePos, projMatrix);
+	//ps.eyePos = mul(ps.eyePos, projMatrix);
 	ps.tex0 = vertex.tex0;
 	ps.tex0 = mul(ps.tex0, texScaleMatrix).xy;
 
@@ -73,7 +85,19 @@ float4 PS_Main( PS_Input frag ) : SV_TARGET
 	float4 light = float4(1.0f, 1.0f, 1.0f, .0f);
 	float3 lightDirection = float3(-1.0f, 1.0f, -1.0f);
 	float factor = dot(frag.normal, lightDirection);
-	return GeometryColorMap.Sample(samWarp, frag.tex0) * light * factor;
+
+	float4 ret = GeometryColorMap.Sample(samWarp, frag.tex0) * light * factor;
+	
+	// add fog
+	float4 fogColor = float4(.145f, .4f, .42f, .0f);
+	float fogStart = 0.0f;
+	float fogRange = 1000.0f;
+	float4 disVector = frag.eyePos - frag.pos;
+	float dis = length(disVector);
+	float fogFactor = saturate((dis - fogStart)/fogRange);
+	ret = lerp(ret, fogColor, fogFactor);
+
+	return ret;
 }
 
 PS_Input Water_VS_Main( VS_Input vertex )
@@ -84,8 +108,8 @@ PS_Input Water_VS_Main( VS_Input vertex )
 	ps.pos = mul(ps.pos, projMatrix);
 	//ps.normal = mul(vertex.normal, normalMatrix);
 	ps.normal = vertex.normal;
-	//ps.eyePos = mul(eyePos, worldMatrix);
-	//ps.eyePos = mul(ps.eyePos, viewMatrix);
+	ps.eyePos = mul(eyePos, worldMatrix);
+	ps.eyePos = mul(ps.eyePos, viewMatrix);
 	//ps.eyePos = mul(ps.eyePos, projMatrix);
 	ps.tex0 = vertex.tex0;
 	ps.tex0.y += 0.00005f * elapseTime;
@@ -102,8 +126,18 @@ PS_Input Water_VS_Main( VS_Input vertex )
 
 float4 Water_PS_Main( PS_Input frag ) : SV_TARGET
 {
-	float4 ret = float4(1.0f, 1.0f, 1.0f, .5f);
+	float4 ret = float4(1.0f, 1.0f, 1.0f, .7f);
 	ret.xyz = (WaterColorMap.Sample(samWarp, frag.tex0) * WaterColorMap1.Sample(samWarp, frag.tex0)).xyz;
+
+	// add fog
+	float4 fogColor = float4(.145f, .4f, .42f, .0f);
+	float fogStart = 0.0f;
+	float fogRange = 1000.0f;
+	float4 disVector = frag.eyePos - frag.pos;
+	float dis = length(disVector);
+	float fogFactor = saturate((dis - fogStart)/fogRange);
+	ret = lerp(ret, fogColor, fogFactor);
+
 	return ret;
 }
 
@@ -113,6 +147,7 @@ technique11 Geometry
 	{
 		SetVertexShader( CompileShader( vs_4_0, VS_Main() ) );
 		SetPixelShader( CompileShader( ps_4_0, PS_Main() ) );
+		SetBlendState(noBlend, float4(.0f, .0f, .0f, .0f), 0xffffffff);
 	}
 
 	pass p1
