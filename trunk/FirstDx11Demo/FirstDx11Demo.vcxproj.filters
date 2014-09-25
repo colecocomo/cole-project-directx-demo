@@ -28,9 +28,6 @@
     <None Include="FX\SolidGreenColor.fx">
       <Filter>FX</Filter>
     </None>
-    <None Include="FX\Cube.fx">
-      <Filter>FX</Filter>
-    </None>
     <None Include="FX\ObjModel.fx">
       <Filter>FX</Filter>
     </None>
@@ -76,5 +73,10 @@
     <ResourceCompile Include="FirstDx11Demo.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="FX\Cube.fx">
+      <Filter>FX</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

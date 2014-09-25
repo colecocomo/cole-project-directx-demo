@@ -2039,7 +2039,7 @@ void CD3dDisplay::GenerateWaterMesh(unsigned int dwWidth, unsigned int dwHeight)
 			fX = j * dx - fHalfWidth;
 
 			GeometryVertexFmt* geometry = &(geometryVertex[ i * maxX + j]);
-			geometry->postion = XMFLOAT3(fX, .0f, fZ);
+			geometry->postion = XMFLOAT3(fX, -0.2f, fZ);
 			geometry->normal = XMFLOAT3(.0f, 1.0f, .0f);;
 			geometry->uv = XMFLOAT2((float)i * 1.0/(float)maxX, (float)j * 1.0/(float)maxY);
 		}
@@ -2497,7 +2497,6 @@ void CD3dDisplay::DrawGeometry()
 	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_pGeometryVertexBuffer, &dwStrides, &dwOffsets);
 	m_pD3d11DeviceContext->IASetIndexBuffer(m_pGeometryIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//m_pD3d11DeviceContext->PSSetSamplers(0, 1, &pSamplerState);
 	m_pD3d11DeviceContext->RSSetState(pRasterizerState);
 
 	D3D11_VIEWPORT vp;
