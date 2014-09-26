@@ -92,11 +92,17 @@
     <None Include="FirstDx11Demo.ico" />
     <CustomBuild Include="FX\Cube.fx">
       <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">fxc /Fc /Od /Zi /T fx_5_0 /Fo "%(RelativeDir)\%(Filename).fxo" "%(FullPath)"</Command>
     </CustomBuild>
     <None Include="FX\Effect.fx" />
     <None Include="FX\Geometry.fx" />
     <None Include="FX\ObjModel.fx" />
     <None Include="FX\SolidGreenColor.fx" />
+    <CustomBuild Include="FX\Stencil.fx">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">fxc /Fc /Od /Zi /T fx_5_0 "%(RelativeDir)\%(Filename).fx" /Fo "%(RelativeDir)\%(Filename).fxo"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">fxc /T fx_5_0 /Fo "%(RelativeDir)\%(Filename).fxo" "%(FullPath)"</Command>
+    </CustomBuild>
     <None Include="ReadMe.txt" />
     <None Include="small.ico" />
   </ItemGroup>

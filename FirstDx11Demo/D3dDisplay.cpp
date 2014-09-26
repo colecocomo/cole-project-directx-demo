@@ -68,7 +68,16 @@ m_pWaterVertexBuffer(0),
 m_pWaterIndexBuffer(0),
 m_dwWaterHeight(0),
 m_dwWaterWidth(0),
-m_dwWaterIdxCnt(0)
+m_dwWaterIdxCnt(0),
+m_pWallVertexBuffer(0),
+m_pWallIndexBuffer(0),
+m_dwWallVertexCnt(0),
+m_dwWallIndexCnt(0),
+m_pFloorVertexBuffer(0),
+m_pFloorIndexBuffer(0),
+m_dwFloorVertexCnt(0),
+m_dwFloorIndexCnt(0),
+m_pMirrorEffect(0)
 {
 	m_vObjModelIndexBuff.clear();
 	m_vObjModelVertexBuff.clear();
@@ -103,6 +112,12 @@ CD3dDisplay::~CD3dDisplay(void)
 	SAFE_RELEASE(m_pGeometryVertexBuffer);
 	SAFE_RELEASE(m_pWaterIndexBuffer);
 	SAFE_RELEASE(m_pWaterVertexBuffer);
+
+	SAFE_RELEASE(m_pWallVertexBuffer);
+	SAFE_RELEASE(m_pWallIndexBuffer);
+	SAFE_RELEASE(m_pFloorVertexBuffer);
+	SAFE_RELEASE(m_pFloorIndexBuffer);
+	SAFE_RELEASE(m_pMirrorEffect);
 
 	BufferVectorIter iter = m_vObjModelIndexBuff.begin();
 	while(iter != m_vObjModelIndexBuff.end())
@@ -2604,4 +2619,180 @@ error:
 	SAFE_RELEASE(pSamplerState);
 	SAFE_RELEASE(pShaderResView);
 	SAFE_RELEASE(pShaderResView1);
+}
+
+void CD3dDisplay::LoadMirrorObj()
+{
+	HRESULT hr = S_OK;
+	LoadModelFromFile(_T(".\\RES\\ObjModel\\skull.txt"));
+
+#define WALL_SIZE 50
+#define FLOOR_SIZE 50
+	m_dwWallVertexCnt = WALL_SIZE * WALL_SIZE;
+	m_dwWallIndexCnt = (WALL_SIZE - 1) * (WALL_SIZE - 1) * 2;
+	GeometryVertexFmt *pWallVertexArray = new GeometryVertexFmt[m_dwWallVertexCnt];
+	unsigned int *pWallIndexArray = new unsigned int[m_dwWallIndexCnt];
+	m_dwFloorVertexCnt = FLOOR_SIZE * FLOOR_SIZE;
+	m_dwFloorIndexCnt = (FLOOR_SIZE - 1) * (FLOOR_SIZE - 1) * 2;
+	GeometryVertexFmt *pFloorVertexArray = new GeometryVertexFmt[m_dwFloorVertexCnt];
+	unsigned int *pFloorIndexArray = new unsigned int[m_dwFloorIndexCnt];
+	float fX, fY, fZ = .0f;
+	fX = fY = fZ;
+	unsigned int dwIdx = 0;
+	for (int i = 0; i < WALL_SIZE; i++)
+	{
+		for (int j = 0; j < WALL_SIZE; j++)
+		{
+			fX = i;
+			fY = j;
+			GeometryVertexFmt vertex = *(pWallVertexArray+dwIdx);
+			vertex.postion = XMFLOAT3(fX, fY, .0f);
+			vertex.normal = XMFLOAT3(.0f, .0f, 1.0f);
+			vertex.uv = XMFLOAT2(1.0f/(i+1), 1.0f/(j+1));
+			dwIdx++;
+		}
+	}
+
+	dwIdx = 0;
+	for (int i = 0; i < WALL_SIZE; i++)
+	{
+		for (int j = 0; j < WALL_SIZE; j++)
+		{
+			pWallIndexArray[dwIdx++] = i * WALL_SIZE + j;
+			pWallIndexArray[dwIdx++] = i * WALL_SIZE + j + 1;
+			pWallIndexArray[dwIdx++] =  (i + 1) * WALL_SIZE + j;
+
+			pWallIndexArray[dwIdx++] = i * WALL_SIZE + j + 1;
+			pWallIndexArray[dwIdx++] = (i + 1) * WALL_SIZE + j + 1;
+			pWallIndexArray[dwIdx++] = (i + 1) * WALL_SIZE + j;
+		}
+	}
+
+	D3D11_BUFFER_DESC bufferDesc;
+	ZeroMemory(&bufferDesc, sizeof(D3D11_BUFFER_DESC));
+	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	bufferDesc.ByteWidth = sizeof(GeometryVertexFmt) * m_dwWallVertexCnt;
+	bufferDesc.StructureByteStride = sizeof(GeometryVertexFmt);
+	D3D11_SUBRESOURCE_DATA subResData;
+	ZeroMemory(&subResData, sizeof(D3D11_SUBRESOURCE_DATA));
+	subResData.pSysMem = pWallVertexArray;
+
+	hr = m_pD3d11Device->CreateBuffer(&bufferDesc, &subResData, &m_pWallVertexBuffer);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	ZeroMemory(&bufferDesc, sizeof(D3D11_BUFFER_DESC));
+	bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	bufferDesc.ByteWidth = sizeof(unsigned int) * m_dwWallIndexCnt;
+	bufferDesc.StructureByteStride = sizeof(unsigned int);
+	ZeroMemory(&subResData, sizeof(D3D11_SUBRESOURCE_DATA));
+	subResData.pSysMem = pWallIndexArray;
+
+	hr = m_pD3d11Device->CreateBuffer(&bufferDesc, &subResData, &m_pWallIndexBuffer);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	dwIdx = 0;
+	for (int i = 0; i < FLOOR_SIZE; i++)
+	{
+		for (int j = 0; j < FLOOR_SIZE; j++)
+		{
+			fX = i;
+			fZ = j;
+			GeometryVertexFmt vertex = *(pFloorVertexArray+dwIdx);
+			vertex.postion = XMFLOAT3(fX, .0f, fZ);
+			vertex.normal = XMFLOAT3(.0f, 1.0f, .0f);
+			vertex.uv = XMFLOAT2(1.0f/(i+1), 1.0f/(j+1));
+			dwIdx++;
+		}
+	}
+
+	dwIdx = 0;
+	for (int i = 0; i < FLOOR_SIZE; i++)
+	{
+		for (int j = 0; j < FLOOR_SIZE; j++)
+		{
+			pFloorIndexArray[dwIdx++] = i * FLOOR_SIZE + j;
+			pFloorIndexArray[dwIdx++] = i * FLOOR_SIZE + j + 1;
+			pFloorIndexArray[dwIdx++] =  (i + 1) * FLOOR_SIZE + j;
+
+			pFloorIndexArray[dwIdx++] = i * FLOOR_SIZE + j + 1;
+			pFloorIndexArray[dwIdx++] = (i + 1) * FLOOR_SIZE + j + 1;
+			pFloorIndexArray[dwIdx++] = (i + 1) * FLOOR_SIZE + j;
+		}
+	}
+
+	ZeroMemory(&bufferDesc, sizeof(D3D11_BUFFER_DESC));
+	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	bufferDesc.ByteWidth = sizeof(GeometryVertexFmt) * m_dwFloorVertexCnt;
+	bufferDesc.StructureByteStride = sizeof(GeometryVertexFmt);
+	ZeroMemory(&subResData, sizeof(D3D11_SUBRESOURCE_DATA));
+	subResData.pSysMem = pFloorVertexArray;
+
+	hr = m_pD3d11Device->CreateBuffer(&bufferDesc, &subResData, &m_pFloorVertexBuffer);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	ZeroMemory(&bufferDesc, sizeof(D3D11_BUFFER_DESC));
+	bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	bufferDesc.ByteWidth = sizeof(unsigned int) * m_dwFloorIndexCnt;
+	bufferDesc.StructureByteStride = sizeof(unsigned int);
+	ZeroMemory(&subResData, sizeof(D3D11_SUBRESOURCE_DATA));
+	subResData.pSysMem = pFloorIndexArray;
+
+	hr = m_pD3d11Device->CreateBuffer(&bufferDesc, &subResData, &m_pFloorIndexBuffer);
+	if (FAILED(hr))
+	{
+		return;
+	}
+}
+
+void CD3dDisplay::DrawMirror()
+{
+	HRESULT hr = S_OK;
+	ID3D10Blob* pEffectBuff = NULL;
+	ID3D10Blob* pEffectError = NULL;
+
+	hr = D3DX11CompileFromFile( _T("FX/Stencil.fx"),
+								0,
+								0,
+								0,
+								"fx_5_0",
+								0,
+								0,
+								0,
+								&pEffectBuff,
+								&pEffectError,
+								0);
+	if (FAILED(hr))
+	{
+		void* str = pEffectError->GetBufferPointer();
+		wstring strError = AnsiToUnicode((char*)str);
+		OutputDebugString(strError.c_str());
+		goto error;
+	}
+
+	hr = D3DX11CreateEffectFromMemory(	pEffectBuff->GetBufferPointer(), 
+										pEffectBuff->GetBufferSize(),
+										0,
+										m_pD3d11Device,
+										&m_pMirrorEffect);
+	if (FAILED(hr))
+	{
+		goto error;
+	}
+
+error:
+	SAFE_RELEASE(pEffectBuff);
+	SAFE_RELEASE(pEffectError)
 }
