@@ -78,5 +78,8 @@
     <CustomBuild Include="FX\Cube.fx">
       <Filter>FX</Filter>
     </CustomBuild>
+    <CustomBuild Include="FX\Stencil.fx">
+      <Filter>FX</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

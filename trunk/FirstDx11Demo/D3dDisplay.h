@@ -45,6 +45,9 @@ public:
 
 	void DrawGeometry();
 
+	void LoadMirrorObj();
+	void DrawMirror();
+
 private:
     ID3D11Device*                   m_pD3d11Device;
     ID3D11DeviceContext*            m_pD3d11DeviceContext;
@@ -103,5 +106,16 @@ private:
 	unsigned int				m_dwWaterWidth;
 	unsigned int				m_dwWaterHeight;
 	unsigned int				m_dwWaterIdxCnt;
+
+	// mirror
+	ID3D11Buffer*				m_pWallVertexBuffer;
+	ID3D11Buffer*				m_pWallIndexBuffer;
+	unsigned int				m_dwWallVertexCnt;
+	unsigned int				m_dwWallIndexCnt;
+	ID3D11Buffer*				m_pFloorVertexBuffer;
+	ID3D11Buffer*				m_pFloorIndexBuffer;
+	unsigned int				m_dwFloorVertexCnt;
+	unsigned int				m_dwFloorIndexCnt;
+	ID3DX11Effect*				m_pMirrorEffect;
 };
 
