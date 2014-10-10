@@ -48,7 +48,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	while(true)
 	{
 		g_D3dDisplay.UpdateElapseTime();
-		g_D3dDisplay.DrawGeometry();
+		g_D3dDisplay.DrawMirror();
 		if (PeekMessage(&msg, NULL, 0, 0,PM_REMOVE))
 		{
 			if (msg.message == WM_QUIT)
