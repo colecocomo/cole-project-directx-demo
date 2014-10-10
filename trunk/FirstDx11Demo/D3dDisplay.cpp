@@ -334,6 +334,7 @@ bool CD3dDisplay::InitDevice3D(HWND hWnd)
 
 	GenerateGeometry(500, 500);
 	GenerateWaterMesh(500, 500);
+	LoadMirrorObj();
 
     //return LoadModelFromFile(_T(".\\RES\\ObjModel\\skull.txt"));
 	return true;
@@ -2629,11 +2630,11 @@ void CD3dDisplay::LoadMirrorObj()
 #define WALL_SIZE 50
 #define FLOOR_SIZE 50
 	m_dwWallVertexCnt = WALL_SIZE * WALL_SIZE;
-	m_dwWallIndexCnt = (WALL_SIZE - 1) * (WALL_SIZE - 1) * 2;
+	m_dwWallIndexCnt = (WALL_SIZE - 1) * (WALL_SIZE - 1) * 2 * 3;
 	GeometryVertexFmt *pWallVertexArray = new GeometryVertexFmt[m_dwWallVertexCnt];
 	unsigned int *pWallIndexArray = new unsigned int[m_dwWallIndexCnt];
 	m_dwFloorVertexCnt = FLOOR_SIZE * FLOOR_SIZE;
-	m_dwFloorIndexCnt = (FLOOR_SIZE - 1) * (FLOOR_SIZE - 1) * 2;
+	m_dwFloorIndexCnt = (FLOOR_SIZE - 1) * (FLOOR_SIZE - 1) * 2 * 3;
 	GeometryVertexFmt *pFloorVertexArray = new GeometryVertexFmt[m_dwFloorVertexCnt];
 	unsigned int *pFloorIndexArray = new unsigned int[m_dwFloorIndexCnt];
 	float fX, fY, fZ = .0f;
@@ -2645,26 +2646,26 @@ void CD3dDisplay::LoadMirrorObj()
 		{
 			fX = i;
 			fY = j;
-			GeometryVertexFmt vertex = *(pWallVertexArray+dwIdx);
-			vertex.postion = XMFLOAT3(fX, fY, .0f);
-			vertex.normal = XMFLOAT3(.0f, .0f, 1.0f);
-			vertex.uv = XMFLOAT2(1.0f/(i+1), 1.0f/(j+1));
+			GeometryVertexFmt* vertex = pWallVertexArray + dwIdx;
+			vertex->postion = XMFLOAT3(fX, fY, .0f);
+			vertex->normal = XMFLOAT3(-1.0f, .0f, .0f);
+			vertex->uv = XMFLOAT2(1.0f*i/WALL_SIZE, 1.0f*j/WALL_SIZE);
 			dwIdx++;
 		}
 	}
 
 	dwIdx = 0;
-	for (int i = 0; i < WALL_SIZE; i++)
+	for (int i = 0; i < WALL_SIZE - 1; i++)
 	{
-		for (int j = 0; j < WALL_SIZE; j++)
+		for (int j = 0; j < WALL_SIZE - 1; j++)
 		{
 			pWallIndexArray[dwIdx++] = i * WALL_SIZE + j;
+			pWallIndexArray[dwIdx++] = (i + 1) * WALL_SIZE + j;
 			pWallIndexArray[dwIdx++] = i * WALL_SIZE + j + 1;
-			pWallIndexArray[dwIdx++] =  (i + 1) * WALL_SIZE + j;
 
 			pWallIndexArray[dwIdx++] = i * WALL_SIZE + j + 1;
-			pWallIndexArray[dwIdx++] = (i + 1) * WALL_SIZE + j + 1;
 			pWallIndexArray[dwIdx++] = (i + 1) * WALL_SIZE + j;
+			pWallIndexArray[dwIdx++] = (i + 1) * WALL_SIZE + j + 1;
 		}
 	}
 
@@ -2705,18 +2706,18 @@ void CD3dDisplay::LoadMirrorObj()
 		{
 			fX = i;
 			fZ = j;
-			GeometryVertexFmt vertex = *(pFloorVertexArray+dwIdx);
-			vertex.postion = XMFLOAT3(fX, .0f, fZ);
-			vertex.normal = XMFLOAT3(.0f, 1.0f, .0f);
-			vertex.uv = XMFLOAT2(1.0f/(i+1), 1.0f/(j+1));
+			GeometryVertexFmt* vertex = pFloorVertexArray + dwIdx;
+			vertex->postion = XMFLOAT3(fX, .0f, fZ);
+			vertex->normal = XMFLOAT3(.0f, 1.0f, .0f);
+			vertex->uv = XMFLOAT2(1.0f*i/FLOOR_SIZE, 1.0f*j/FLOOR_SIZE);
 			dwIdx++;
 		}
 	}
 
 	dwIdx = 0;
-	for (int i = 0; i < FLOOR_SIZE; i++)
+	for (int i = 0; i < (FLOOR_SIZE - 1); i++)
 	{
-		for (int j = 0; j < FLOOR_SIZE; j++)
+		for (int j = 0; j < (FLOOR_SIZE - 1); j++)
 		{
 			pFloorIndexArray[dwIdx++] = i * FLOOR_SIZE + j;
 			pFloorIndexArray[dwIdx++] = i * FLOOR_SIZE + j + 1;
@@ -2762,6 +2763,19 @@ void CD3dDisplay::DrawMirror()
 	HRESULT hr = S_OK;
 	ID3D10Blob* pEffectBuff = NULL;
 	ID3D10Blob* pEffectError = NULL;
+	ID3D11ShaderResourceView* pSRVWall = NULL;
+	ID3D11ShaderResourceView* pSRVFloor = NULL;
+	ID3D11RasterizerState* pRasterizerState = NULL;
+	ID3D11InputLayout* pInputLayout = NULL;
+	ID3DX11EffectTechnique* pEffectTechnique = NULL;
+	ID3DX11EffectPass* pEffectPass = NULL;
+
+	XMMATRIX viewMatrix, projMatrix, worldMatrix, worldViewProjNormalMatrix, texScaleMatrix;
+	ZeroMemory(&viewMatrix, sizeof(XMMATRIX));
+	ZeroMemory(&projMatrix, sizeof(XMMATRIX));
+	ZeroMemory(&worldMatrix, sizeof(XMMATRIX));
+	ZeroMemory(&worldViewProjNormalMatrix, sizeof(XMMATRIX));
+	ZeroMemory(&texScaleMatrix, sizeof(XMMATRIX));
 
 	hr = D3DX11CompileFromFile( _T("FX/Stencil.fx"),
 								0,
@@ -2792,7 +2806,284 @@ void CD3dDisplay::DrawMirror()
 		goto error;
 	}
 
+	hr = D3DX11CreateShaderResourceViewFromFile(m_pD3d11Device,
+												_T("RES/ObjModel/brick01.dds"),
+												NULL,
+												NULL,
+												&pSRVWall,
+												NULL);
+	if (FAILED(hr))
+	{
+		goto error;
+	}
+
+	hr = D3DX11CreateShaderResourceViewFromFile(m_pD3d11Device,
+												_T("RES/ObjModel/checkboard.dds"),
+												NULL,
+												NULL,
+												&pSRVFloor,
+												NULL);
+	if (FAILED(hr))
+	{
+		goto error;
+	}
+
+	D3D11_RASTERIZER_DESC rasterizerDesc;
+	ZeroMemory(&rasterizerDesc, sizeof(D3D11_RASTERIZER_DESC));
+	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
+	rasterizerDesc.CullMode = D3D11_CULL_BACK;
+	rasterizerDesc.FrontCounterClockwise = TRUE;
+	//rasterizerDesc.FillMode = D3D11_FILL_WIREFRAME;
+	hr = m_pD3d11Device->CreateRasterizerState(&rasterizerDesc, &pRasterizerState);
+	if (FAILED(hr))
+	{
+		goto error;
+	}
+
+	pEffectTechnique = m_pMirrorEffect->GetTechniqueByName("Mirror");
+	if (!pEffectTechnique)
+	{
+		goto error;
+	}
+
+	pEffectPass = pEffectTechnique->GetPassByName("p0");
+	if (!pEffectPass)
+	{
+		goto error;
+	}
+
+	D3DX11_EFFECT_SHADER_DESC effectShaderDesc;
+	D3DX11_PASS_SHADER_DESC passShaderDesc;
+	ZeroMemory(&effectShaderDesc, sizeof(D3DX11_EFFECT_SHADER_DESC));
+	ZeroMemory(&passShaderDesc, sizeof(D3DX11_PASS_SHADER_DESC));
+	pEffectPass->GetVertexShaderDesc(&passShaderDesc);
+	passShaderDesc.pShaderVariable->GetShaderDesc(0, &effectShaderDesc);
+
+	D3D11_INPUT_ELEMENT_DESC inputDesc[3];
+	ZeroMemory(&inputDesc, sizeof(inputDesc));
+	inputDesc[0].SemanticName = "POSITION";
+	inputDesc[0].InputSlot = 0;
+	inputDesc[0].AlignedByteOffset = 0;
+	inputDesc[0].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	inputDesc[0].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	inputDesc[0].SemanticIndex = 0;
+	inputDesc[1].SemanticName = "NORMAL";
+	inputDesc[1].InputSlot = 0;
+	inputDesc[1].AlignedByteOffset = 12;
+	inputDesc[1].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+	inputDesc[1].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	inputDesc[1].SemanticIndex = 0;
+	inputDesc[2].SemanticName = "TEXCOORD";
+	inputDesc[2].InputSlot = 0;
+	inputDesc[2].AlignedByteOffset = 24;
+	inputDesc[2].Format = DXGI_FORMAT_R32G32_FLOAT;
+	inputDesc[2].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+	inputDesc[2].SemanticIndex = 0;
+
+	hr = m_pD3d11Device->CreateInputLayout(	inputDesc,
+											3,
+											effectShaderDesc.pBytecode,
+											effectShaderDesc.BytecodeLength,
+											&pInputLayout);
+	if (FAILED(hr))
+	{
+		goto error;
+	}
+
+	m_eyePos = XMFLOAT3(70.0f, 70.0f, 10.0f);
+	FXMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, .0f);
+	FXMVECTOR lookPos = XMVectorSet(.0f, .0f, .0f, .0f);
+	FXMVECTOR upDir = XMVectorSet(.0f, 1.0f, .0f, .0f);
+
+	viewMatrix = XMMatrixIdentity();
+	viewMatrix = XMMatrixLookAtLH(eyePos, lookPos, upDir);
+	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
+	worldMatrix = m_localTranslation;
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, .0f, .0f));
+
+	worldViewProjNormalMatrix = XMMatrixMultiply(worldMatrix, viewMatrix);
+	XMVECTOR determinant = XMMatrixDeterminant(worldViewProjNormalMatrix);
+	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldViewProjNormalMatrix);
+	worldViewProjNormalMatrix = XMMatrixTranspose(worldViewProjNormalMatrix);
+
+	ID3DX11EffectShaderResourceVariable* pWallSRV = m_pMirrorEffect->GetVariableByName("WallColorMap")->AsShaderResource();
+	if (pWallSRV)
+	{
+		pWallSRV->SetResource(pSRVWall);
+	}
+
+	ID3DX11EffectShaderResourceVariable* pFloorSRV = m_pMirrorEffect->GetVariableByName("FloorColorMap")->AsShaderResource();
+	if (pFloorSRV)
+	{
+		pFloorSRV->SetResource(pSRVFloor);
+	}
+
+	ID3DX11EffectMatrixVariable* pWorldMatrix = m_pMirrorEffect->GetVariableByName("worldMatrix")->AsMatrix();
+	if (pWorldMatrix)
+	{
+		pWorldMatrix->SetMatrix((float*)&worldMatrix);
+	}
+
+	ID3DX11EffectMatrixVariable* pViewMatrix = m_pMirrorEffect->GetVariableByName("viewMatrix")->AsMatrix();
+	if (pViewMatrix)
+	{
+		pViewMatrix->SetMatrix((float*)&viewMatrix);
+	}
+
+	ID3DX11EffectMatrixVariable* pProjMatrix = m_pMirrorEffect->GetVariableByName("projMatrix")->AsMatrix();
+	if (pProjMatrix)
+	{
+		pProjMatrix->SetMatrix((float*)&projMatrix);
+	}
+
+	ID3DX11EffectMatrixVariable* pWorldViewProjNormalMatrix = m_pMirrorEffect->GetVariableByName("normalMatrix")->AsMatrix();
+	if (pWorldViewProjNormalMatrix)
+	{
+		pWorldViewProjNormalMatrix->SetMatrix((float*)&worldViewProjNormalMatrix);
+	}
+
+	texScaleMatrix = XMMatrixIdentity();
+	ID3DX11EffectMatrixVariable* pTexScaleMatrix = m_pMirrorEffect->GetVariableByName("texScaleMatrix")->AsMatrix();
+	if (pTexScaleMatrix)
+	{
+		pTexScaleMatrix->SetMatrix((float*)&texScaleMatrix);
+	}
+
+	ID3DX11EffectScalarVariable* pElapseTime = m_pMirrorEffect->GetVariableByName("elapseTime")->AsScalar();
+	if (pElapseTime)
+	{
+		pElapseTime->SetFloat((float)m_dwElapseTime);
+	}
+
+	ID3DX11EffectScalarVariable* pDeltaTime = m_pMirrorEffect->GetVariableByName("deltaTime")->AsScalar();
+	if (pDeltaTime)
+	{
+		pDeltaTime->SetFloat((float)m_dwDeltaTime);
+	}
+
+	ID3DX11EffectVectorVariable* pEyePos = m_pMirrorEffect->GetVariableByName("eyePos")->AsVector();
+	if (pEyePos)
+	{
+		pEyePos->SetFloatVector((float*)&eyePos);
+	}
+
+	D3D11_VIEWPORT vp;
+	vp.Height = (FLOAT)m_dwHeight;
+	vp.Width = (FLOAT)m_dwWidth;
+	vp.TopLeftX = .0f;
+	vp.TopLeftY = .0f;
+	vp.MinDepth = .0f;
+	vp.MaxDepth = 1.0f;
+	m_pD3d11DeviceContext->RSSetViewports(1, &vp);
+
+	m_pD3d11DeviceContext->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	float colorArray[4] = {.0,.0,.0,.0};
+	m_pD3d11DeviceContext->ClearRenderTargetView(m_pRenderTargetView, colorArray);
+
+	m_pD3d11DeviceContext->IASetInputLayout(pInputLayout);
+
+	UINT dwStride = sizeof(GeometryVertexFmt);
+	UINT dwOffset = 0;
+
+	ID3D11Buffer* InputVertexBuffers[2];
+	InputVertexBuffers[0] = m_pWallVertexBuffer;
+	InputVertexBuffers[1] = m_pFloorVertexBuffer;
+	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_pWallVertexBuffer, &dwStride, &dwOffset);
+
+	ID3D11Buffer* InputIndexBuffers[2];
+	InputIndexBuffers[0] = m_pWallIndexBuffer;
+	InputIndexBuffers[1] = m_pFloorIndexBuffer;
+	m_pD3d11DeviceContext->IASetIndexBuffer(m_pWallIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	ID3DX11EffectScalarVariable* pIsWall = m_pMirrorEffect->GetVariableByName("isWall")->AsScalar();
+	if (pIsWall)
+	{
+		pIsWall->SetInt((int)1);
+	}
+
+	pEffectPass->Apply(0, m_pD3d11DeviceContext);
+	m_pD3d11DeviceContext->DrawIndexed(m_dwWallIndexCnt, 0, 0);
+
+	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_pFloorVertexBuffer, &dwStride, &dwOffset);
+	m_pD3d11DeviceContext->IASetIndexBuffer(m_pFloorIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	pWallSRV = m_pMirrorEffect->GetVariableByName("WallColorMap")->AsShaderResource();
+	if (pWallSRV)
+	{
+		pWallSRV->SetResource(pSRVWall);
+	}
+
+	pFloorSRV = m_pMirrorEffect->GetVariableByName("FloorColorMap")->AsShaderResource();
+	if (pFloorSRV)
+	{
+		pFloorSRV->SetResource(pSRVFloor);
+	}
+
+	pWorldMatrix = m_pMirrorEffect->GetVariableByName("worldMatrix")->AsMatrix();
+	if (pWorldMatrix)
+	{
+		pWorldMatrix->SetMatrix((float*)&worldMatrix);
+	}
+
+	pViewMatrix = m_pMirrorEffect->GetVariableByName("viewMatrix")->AsMatrix();
+	if (pViewMatrix)
+	{
+		pViewMatrix->SetMatrix((float*)&viewMatrix);
+	}
+
+	pProjMatrix = m_pMirrorEffect->GetVariableByName("projMatrix")->AsMatrix();
+	if (pProjMatrix)
+	{
+		pProjMatrix->SetMatrix((float*)&projMatrix);
+	}
+
+	pWorldViewProjNormalMatrix = m_pMirrorEffect->GetVariableByName("normalMatrix")->AsMatrix();
+	if (pWorldViewProjNormalMatrix)
+	{
+		pWorldViewProjNormalMatrix->SetMatrix((float*)&worldViewProjNormalMatrix);
+	}
+
+	pTexScaleMatrix = m_pMirrorEffect->GetVariableByName("texScaleMatrix")->AsMatrix();
+	if (pTexScaleMatrix)
+	{
+		pTexScaleMatrix->SetMatrix((float*)&texScaleMatrix);
+	}
+
+	pElapseTime = m_pMirrorEffect->GetVariableByName("elapseTime")->AsScalar();
+	if (pElapseTime)
+	{
+		pElapseTime->SetFloat((float)m_dwElapseTime);
+	}
+
+	pDeltaTime = m_pMirrorEffect->GetVariableByName("deltaTime")->AsScalar();
+	if (pDeltaTime)
+	{
+		pDeltaTime->SetFloat((float)m_dwDeltaTime);
+	}
+
+	pEyePos = m_pMirrorEffect->GetVariableByName("eyePos")->AsVector();
+	if (pEyePos)
+	{
+		pEyePos->SetFloatVector((float*)&eyePos);
+	}
+
+	pIsWall = m_pMirrorEffect->GetVariableByName("isWall")->AsScalar();
+	if (pIsWall)
+	{
+		//pIsWall->SetInt(0);
+	}
+
+	m_pD3d11DeviceContext->DrawIndexed(m_dwFloorIndexCnt, 0, 0);
+
+	m_pDXGISwapChain->Present(0, 0);
+
 error:
 	SAFE_RELEASE(pEffectBuff);
-	SAFE_RELEASE(pEffectError)
+	SAFE_RELEASE(pEffectError);
+	SAFE_RELEASE(pSRVWall);
+	SAFE_RELEASE(pSRVFloor);
+	SAFE_RELEASE(pRasterizerState);
+	SAFE_RELEASE(pInputLayout);
 }
