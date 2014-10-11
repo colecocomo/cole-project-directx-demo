@@ -42,6 +42,7 @@
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(DXSDK_DIR)Samples\C++\Effects11\Inc;$(DXSDK_DIR)Include;$(VCInstallDir)PlatformSDK\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(VCInstallDir)PlatformSDK\lib;$(LibraryPath);$(DXSDK_DIR)Lib\x86</LibraryPath>
+    <ExecutablePath>$(DXSDK_DIR)Utilities\bin\x64;$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -94,9 +95,15 @@
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">fxc /Fc /Od /Zi /T fx_5_0 /Fo "%(RelativeDir)\%(Filename).fxo" "%(FullPath)"</Command>
     </CustomBuild>
-    <None Include="FX\Effect.fx" />
+    <CustomBuild Include="FX\Effect.fx">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">fxc /Fc /Od /Zi /T fx_5_0 "%(RelativeDir)\%(Filename).fx" /Fo "%(RelativeDir)\%(Filename).fxo"</Command>
+    </CustomBuild>
     <None Include="FX\Geometry.fx" />
-    <None Include="FX\ObjModel.fx" />
+    <CustomBuild Include="FX\ObjModel.fx">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">fxc /Fc /Od /Zi /T fx_5_0 "%(RelativeDir)\%(Filename).fx" /Fo "%(RelativeDir)\%(Filename).fxo"</Command>
+    </CustomBuild>
     <None Include="FX\SolidGreenColor.fx" />
     <CustomBuild Include="FX\Stencil.fx">
       <FileType>Document</FileType>

@@ -2777,33 +2777,36 @@ void CD3dDisplay::DrawMirror()
 	ZeroMemory(&worldViewProjNormalMatrix, sizeof(XMMATRIX));
 	ZeroMemory(&texScaleMatrix, sizeof(XMMATRIX));
 
-	hr = D3DX11CompileFromFile( _T("FX/Stencil.fx"),
-								0,
-								0,
-								0,
-								"fx_5_0",
-								0,
-								0,
-								0,
-								&pEffectBuff,
-								&pEffectError,
-								0);
-	if (FAILED(hr))
+	if (NULL == m_pMirrorEffect)
 	{
-		void* str = pEffectError->GetBufferPointer();
-		wstring strError = AnsiToUnicode((char*)str);
-		OutputDebugString(strError.c_str());
-		goto error;
-	}
+		hr = D3DX11CompileFromFile( _T("FX/Stencil.fx"),
+			0,
+			0,
+			0,
+			"fx_5_0",
+			0,
+			0,
+			0,
+			&pEffectBuff,
+			&pEffectError,
+			0);
+		if (FAILED(hr))
+		{
+			void* str = pEffectError->GetBufferPointer();
+			wstring strError = AnsiToUnicode((char*)str);
+			OutputDebugString(strError.c_str());
+			goto error;
+		}
 
-	hr = D3DX11CreateEffectFromMemory(	pEffectBuff->GetBufferPointer(), 
-										pEffectBuff->GetBufferSize(),
-										0,
-										m_pD3d11Device,
-										&m_pMirrorEffect);
-	if (FAILED(hr))
-	{
-		goto error;
+		hr = D3DX11CreateEffectFromMemory(	pEffectBuff->GetBufferPointer(), 
+			pEffectBuff->GetBufferSize(),
+			0,
+			m_pD3d11Device,
+			&m_pMirrorEffect);
+		if (FAILED(hr))
+		{
+			goto error;
+		}
 	}
 
 	hr = D3DX11CreateShaderResourceViewFromFile(m_pD3d11Device,
@@ -2901,9 +2904,9 @@ void CD3dDisplay::DrawMirror()
 	worldMatrix = m_localTranslation;
 	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, .0f, .0f));
 
-	worldViewProjNormalMatrix = XMMatrixMultiply(worldMatrix, viewMatrix);
-	XMVECTOR determinant = XMMatrixDeterminant(worldViewProjNormalMatrix);
-	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldViewProjNormalMatrix);
+	//worldViewProjNormalMatrix = XMMatrixMultiply(worldMatrix, viewMatrix);
+	XMVECTOR determinant = XMMatrixDeterminant(worldMatrix);
+	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldMatrix);
 	worldViewProjNormalMatrix = XMMatrixTranspose(worldViewProjNormalMatrix);
 
 	ID3DX11EffectShaderResourceVariable* pWallSRV = m_pMirrorEffect->GetVariableByName("WallColorMap")->AsShaderResource();
@@ -3009,73 +3012,58 @@ void CD3dDisplay::DrawMirror()
 	m_pD3d11DeviceContext->IASetIndexBuffer(m_pFloorIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	pWallSRV = m_pMirrorEffect->GetVariableByName("WallColorMap")->AsShaderResource();
-	if (pWallSRV)
+	if (pIsWall)
 	{
-		pWallSRV->SetResource(pSRVWall);
+		pIsWall->SetInt(0);
 	}
 
-	pFloorSRV = m_pMirrorEffect->GetVariableByName("FloorColorMap")->AsShaderResource();
-	if (pFloorSRV)
-	{
-		pFloorSRV->SetResource(pSRVFloor);
-	}
+	pEffectPass->Apply(0, m_pD3d11DeviceContext);
 
-	pWorldMatrix = m_pMirrorEffect->GetVariableByName("worldMatrix")->AsMatrix();
+	m_pD3d11DeviceContext->DrawIndexed(m_dwFloorIndexCnt, 0, 0);
+
+	//draw skull
+	// VertexFmtWithNormal same as GeometryVertexFmt
+	viewMatrix = XMMatrixIdentity();
+	viewMatrix = XMMatrixLookAtLH(XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, .0f), lookPos, upDir);
+	worldMatrix = m_localTranslation;
+	worldMatrix = worldMatrix * XMMatrixScaling(4.0f, 4.0f, 4.0f);
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(20.0f, 20.0f, 20.0f));
+
+	determinant = XMMatrixDeterminant(worldMatrix);
+	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldMatrix);
+	worldViewProjNormalMatrix = XMMatrixTranspose(worldViewProjNormalMatrix);
+
+	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_pSkullVertexBuffer, &dwStride, &dwOffset);
+	m_pD3d11DeviceContext->IASetIndexBuffer(m_pSkullIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
 	if (pWorldMatrix)
 	{
 		pWorldMatrix->SetMatrix((float*)&worldMatrix);
 	}
 
-	pViewMatrix = m_pMirrorEffect->GetVariableByName("viewMatrix")->AsMatrix();
 	if (pViewMatrix)
 	{
 		pViewMatrix->SetMatrix((float*)&viewMatrix);
 	}
 
-	pProjMatrix = m_pMirrorEffect->GetVariableByName("projMatrix")->AsMatrix();
 	if (pProjMatrix)
 	{
 		pProjMatrix->SetMatrix((float*)&projMatrix);
 	}
 
-	pWorldViewProjNormalMatrix = m_pMirrorEffect->GetVariableByName("normalMatrix")->AsMatrix();
 	if (pWorldViewProjNormalMatrix)
 	{
 		pWorldViewProjNormalMatrix->SetMatrix((float*)&worldViewProjNormalMatrix);
 	}
 
-	pTexScaleMatrix = m_pMirrorEffect->GetVariableByName("texScaleMatrix")->AsMatrix();
-	if (pTexScaleMatrix)
-	{
-		pTexScaleMatrix->SetMatrix((float*)&texScaleMatrix);
-	}
-
-	pElapseTime = m_pMirrorEffect->GetVariableByName("elapseTime")->AsScalar();
-	if (pElapseTime)
-	{
-		pElapseTime->SetFloat((float)m_dwElapseTime);
-	}
-
-	pDeltaTime = m_pMirrorEffect->GetVariableByName("deltaTime")->AsScalar();
-	if (pDeltaTime)
-	{
-		pDeltaTime->SetFloat((float)m_dwDeltaTime);
-	}
-
-	pEyePos = m_pMirrorEffect->GetVariableByName("eyePos")->AsVector();
-	if (pEyePos)
-	{
-		pEyePos->SetFloatVector((float*)&eyePos);
-	}
-
-	pIsWall = m_pMirrorEffect->GetVariableByName("isWall")->AsScalar();
 	if (pIsWall)
 	{
-		//pIsWall->SetInt(0);
+		pIsWall->SetInt(2);
 	}
 
-	m_pD3d11DeviceContext->DrawIndexed(m_dwFloorIndexCnt, 0, 0);
+	pEffectPass->Apply(0, m_pD3d11DeviceContext);
+	m_pD3d11DeviceContext->DrawIndexed(3*m_dwSkullIndexCnt, 0, 0);
 
 	m_pDXGISwapChain->Present(0, 0);
 

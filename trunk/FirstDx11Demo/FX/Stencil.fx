@@ -18,12 +18,8 @@ cbuffer constantBuffer : register(b0)
 	float4 eyePos;
 	float elapseTime;
 	float deltaTime;
-}; 
-
-cbuffer constantBuffer1 : register(b1)
-{	
 	int  isWall;
-};
+}; 
 
 struct VS_Input
 {
@@ -36,7 +32,7 @@ struct PS_Input
 {
 	float4 pos : SV_POSITION;
 	float3 normal : NORMAL;
-	float4 eyePos : POSITION;
+	float4 posW : POSITION;
 	float2 tex0 : TEXCOORD0;
 };
 
@@ -49,10 +45,7 @@ PS_Input VS_Main_Common( VS_Input vertex )
 
 	ret.normal = mul(vertex.normal, normalMatrix);
 	ret.tex0 = mul(vertex.tex0, texScaleMatrix);
-
-	ret.eyePos = mul(eyePos, worldMatrix);
-	ret.eyePos = mul(ret.eyePos, viewMatrix);
-	ret.eyePos = mul(ret.eyePos, projMatrix);
+	ret.posW = mul(vertex.pos, worldMatrix);;
 
 	return ret;
 }
@@ -61,9 +54,27 @@ PS_Input VS_Main_Common( VS_Input vertex )
 float4 PS_Main_Common( PS_Input frag ) : SV_TARGET
 {
 	float4 ret;
-	if(isWall != 0)
+	if(isWall == 1)
 	{
 		ret = WallColorMap.Sample(sampleWrap, frag.tex0);
+	}
+	else if(isWall == 2)
+	{
+		float4 ambient = float4(.08f, .08f, .08f, 0);
+		float4 directionLight = float4(.678f, .569f, .329f, 0);
+		float3 direction = float3(.0f, 1.0f, .0f );
+		frag.normal = normalize(frag.normal);
+		float factor = max(dot(direction, frag.normal), 0);
+
+		float4 specularLight = float4(1.0f, .0f, .0f, 0);
+		float3 sepcularDirection = float3(.0f, .0f, 1.0f);
+		float3 reflectDirect = reflect(sepcularDirection, frag.normal);
+		reflectDirect = normalize(reflectDirect);
+		float3 eyeDirection = eyePos - frag.posW;
+		eyeDirection = normalize(eyeDirection);
+		float sepcularFactor = max(dot(reflectDirect, eyeDirection), 0);
+
+		ret = ambient + factor * directionLight + pow(sepcularFactor, 1) * specularLight;
 	}
 	else
 	{
