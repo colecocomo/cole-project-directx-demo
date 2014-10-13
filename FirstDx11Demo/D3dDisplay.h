@@ -116,6 +116,10 @@ private:
 	ID3D11Buffer*				m_pFloorIndexBuffer;
 	unsigned int				m_dwFloorVertexCnt;
 	unsigned int				m_dwFloorIndexCnt;
+	ID3D11Buffer*				m_pMirrorVertexBuffer;
+	ID3D11Buffer*				m_pMirrorIndexBuffer;
+	unsigned int				m_dwMirrorVertexCnt;
+	unsigned int				m_dwMirrorIndexCnt;
 	ID3DX11Effect*				m_pMirrorEffect;
 };
 

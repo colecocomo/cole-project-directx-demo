@@ -77,6 +77,10 @@ m_pFloorVertexBuffer(0),
 m_pFloorIndexBuffer(0),
 m_dwFloorVertexCnt(0),
 m_dwFloorIndexCnt(0),
+m_pMirrorVertexBuffer(0),
+m_pMirrorIndexBuffer(0),
+m_dwMirrorVertexCnt(0),
+m_dwMirrorIndexCnt(0),
 m_pMirrorEffect(0)
 {
 	m_vObjModelIndexBuff.clear();
@@ -117,6 +121,8 @@ CD3dDisplay::~CD3dDisplay(void)
 	SAFE_RELEASE(m_pWallIndexBuffer);
 	SAFE_RELEASE(m_pFloorVertexBuffer);
 	SAFE_RELEASE(m_pFloorIndexBuffer);
+	SAFE_RELEASE(m_pMirrorVertexBuffer);
+	SAFE_RELEASE(m_pMirrorIndexBuffer);
 	SAFE_RELEASE(m_pMirrorEffect);
 
 	BufferVectorIter iter = m_vObjModelIndexBuff.begin();
@@ -2627,8 +2633,9 @@ void CD3dDisplay::LoadMirrorObj()
 	HRESULT hr = S_OK;
 	LoadModelFromFile(_T(".\\RES\\ObjModel\\skull.txt"));
 
-#define WALL_SIZE 50
-#define FLOOR_SIZE 50
+#define WALL_SIZE 60
+#define FLOOR_SIZE 60
+#define MIRROR_SIZE 30
 	m_dwWallVertexCnt = WALL_SIZE * WALL_SIZE;
 	m_dwWallIndexCnt = (WALL_SIZE - 1) * (WALL_SIZE - 1) * 2 * 3;
 	GeometryVertexFmt *pWallVertexArray = new GeometryVertexFmt[m_dwWallVertexCnt];
@@ -2637,6 +2644,12 @@ void CD3dDisplay::LoadMirrorObj()
 	m_dwFloorIndexCnt = (FLOOR_SIZE - 1) * (FLOOR_SIZE - 1) * 2 * 3;
 	GeometryVertexFmt *pFloorVertexArray = new GeometryVertexFmt[m_dwFloorVertexCnt];
 	unsigned int *pFloorIndexArray = new unsigned int[m_dwFloorIndexCnt];
+	m_dwMirrorVertexCnt = MIRROR_SIZE * MIRROR_SIZE;
+	m_dwMirrorIndexCnt = (MIRROR_SIZE - 1) * (MIRROR_SIZE - 1) * 2 * 3;
+	GeometryVertexFmt *pMirrorVertexArray = new GeometryVertexFmt[m_dwMirrorVertexCnt];
+	unsigned int *pMirrorIndexArray = new unsigned int[m_dwMirrorIndexCnt];
+
+	//wall
 	float fX, fY, fZ = .0f;
 	fX = fY = fZ;
 	unsigned int dwIdx = 0;
@@ -2699,6 +2712,7 @@ void CD3dDisplay::LoadMirrorObj()
 		return;
 	}
 
+	//floor
 	dwIdx = 0;
 	for (int i = 0; i < FLOOR_SIZE; i++)
 	{
@@ -2752,6 +2766,65 @@ void CD3dDisplay::LoadMirrorObj()
 	subResData.pSysMem = pFloorIndexArray;
 
 	hr = m_pD3d11Device->CreateBuffer(&bufferDesc, &subResData, &m_pFloorIndexBuffer);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	//mirror
+	dwIdx = 0;
+	for (int i = 0; i < MIRROR_SIZE; i++)
+	{
+		for (int j = 0; j < MIRROR_SIZE; j++)
+		{
+			fX = i;
+			fY = j;
+			GeometryVertexFmt* vertex = pMirrorVertexArray + dwIdx;
+			vertex->postion = XMFLOAT3(fX, fY, .1f);
+			vertex->normal = XMFLOAT3(-1.0f, .0f, .0f);
+			vertex->uv = XMFLOAT2(1.0f*i/MIRROR_SIZE, 1.0f*j/MIRROR_SIZE);
+			dwIdx++;
+		}
+	}
+
+	dwIdx = 0;
+	for (int i = 0; i < (MIRROR_SIZE - 1); i++)
+	{
+		for (int j = 0; j < (MIRROR_SIZE - 1); j++)
+		{
+			pMirrorIndexArray[dwIdx++] = i * MIRROR_SIZE + j;
+			pMirrorIndexArray[dwIdx++] = (i + 1) * MIRROR_SIZE + j;
+			pMirrorIndexArray[dwIdx++] = i * MIRROR_SIZE + j + 1;
+
+			pMirrorIndexArray[dwIdx++] = i * MIRROR_SIZE + j + 1;
+			pMirrorIndexArray[dwIdx++] = (i + 1) * MIRROR_SIZE + j;
+			pMirrorIndexArray[dwIdx++] = (i + 1) * MIRROR_SIZE + j + 1;
+		}
+	}
+
+	ZeroMemory(&bufferDesc, sizeof(D3D11_BUFFER_DESC));
+	bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	bufferDesc.ByteWidth = sizeof(GeometryVertexFmt) * m_dwMirrorVertexCnt;
+	bufferDesc.StructureByteStride = sizeof(GeometryVertexFmt);
+	ZeroMemory(&subResData, sizeof(D3D11_SUBRESOURCE_DATA));
+	subResData.pSysMem = pMirrorVertexArray;
+
+	hr = m_pD3d11Device->CreateBuffer(&bufferDesc, &subResData, &m_pMirrorVertexBuffer);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	ZeroMemory(&bufferDesc, sizeof(D3D11_BUFFER_DESC));
+	bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+	bufferDesc.ByteWidth = sizeof(unsigned int) * m_dwMirrorIndexCnt;
+	bufferDesc.StructureByteStride = sizeof(unsigned int);
+	ZeroMemory(&subResData, sizeof(D3D11_SUBRESOURCE_DATA));
+	subResData.pSysMem = pMirrorIndexArray;
+
+	hr = m_pD3d11Device->CreateBuffer(&bufferDesc, &subResData, &m_pMirrorIndexBuffer);
 	if (FAILED(hr))
 	{
 		return;
@@ -2982,7 +3055,7 @@ void CD3dDisplay::DrawMirror()
 	m_pD3d11DeviceContext->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	float colorArray[4] = {.0,.0,.0,.0};
 	m_pD3d11DeviceContext->ClearRenderTargetView(m_pRenderTargetView, colorArray);
-
+	
 	m_pD3d11DeviceContext->IASetInputLayout(pInputLayout);
 
 	UINT dwStride = sizeof(GeometryVertexFmt);
@@ -3023,10 +3096,9 @@ void CD3dDisplay::DrawMirror()
 
 	//draw skull
 	// VertexFmtWithNormal same as GeometryVertexFmt
-	viewMatrix = XMMatrixIdentity();
-	viewMatrix = XMMatrixLookAtLH(XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, .0f), lookPos, upDir);
+#define SKULL_SCALE 2
 	worldMatrix = m_localTranslation;
-	worldMatrix = worldMatrix * XMMatrixScaling(4.0f, 4.0f, 4.0f);
+	worldMatrix = worldMatrix * XMMatrixScaling(SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f);
 	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(20.0f, 20.0f, 20.0f));
 
 	determinant = XMMatrixDeterminant(worldMatrix);
@@ -3042,20 +3114,80 @@ void CD3dDisplay::DrawMirror()
 		pWorldMatrix->SetMatrix((float*)&worldMatrix);
 	}
 
-	if (pViewMatrix)
+	if (pWorldViewProjNormalMatrix)
 	{
-		pViewMatrix->SetMatrix((float*)&viewMatrix);
+		pWorldViewProjNormalMatrix->SetMatrix((float*)&worldViewProjNormalMatrix);
 	}
 
-	if (pProjMatrix)
+	if (pIsWall)
 	{
-		pProjMatrix->SetMatrix((float*)&projMatrix);
+		pIsWall->SetInt(2);
+	}
+
+	pEffectPass->Apply(0, m_pD3d11DeviceContext);
+	m_pD3d11DeviceContext->DrawIndexed(3*m_dwSkullIndexCnt, 0, 0);
+
+	//draw mirror to stencil buffer
+	pEffectPass = pEffectTechnique->GetPassByName("p1");
+	if (NULL == pEffectPass)
+	{
+		goto error;
+	}
+
+	worldMatrix = m_localTranslation;
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, .0f, .0f));
+	determinant = XMMatrixDeterminant(worldMatrix);
+	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldMatrix);
+	worldViewProjNormalMatrix = XMMatrixTranspose(worldViewProjNormalMatrix);
+
+	if (pWorldMatrix)
+	{
+		pWorldMatrix->SetMatrix((float*)&worldMatrix);
 	}
 
 	if (pWorldViewProjNormalMatrix)
 	{
 		pWorldViewProjNormalMatrix->SetMatrix((float*)&worldViewProjNormalMatrix);
 	}
+
+	if (pIsWall)
+	{
+		pIsWall->SetInt(3);
+	}
+	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_pMirrorVertexBuffer, &dwStride, &dwOffset);
+	m_pD3d11DeviceContext->IASetIndexBuffer(m_pMirrorIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	pEffectPass->Apply(0, m_pD3d11DeviceContext);
+	m_pD3d11DeviceContext->DrawIndexed(m_dwMirrorIndexCnt, 0, 0);
+
+	//draw the reflect skull to backbuffer
+	pEffectPass = pEffectTechnique->GetPassByName("p2");
+	if (NULL == pEffectPass)
+	{
+		goto error;
+	}
+
+	worldMatrix = m_localTranslation;
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, .0f, .0f));
+	worldMatrix *= XMMatrixScaling(SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f);
+	XMVECTOR mirrorPlane = XMVectorSet(.0f, .0f, .1f, .0f);
+	worldMatrix *= XMMatrixReflect(mirrorPlane);
+	determinant = XMMatrixDeterminant(worldMatrix);
+	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldMatrix);
+	worldViewProjNormalMatrix = XMMatrixTranspose(worldViewProjNormalMatrix);
+
+	if (pWorldMatrix)
+	{
+		pWorldMatrix->SetMatrix((float*)&worldMatrix);
+	}
+
+	if (pWorldViewProjNormalMatrix)
+	{
+		pWorldViewProjNormalMatrix->SetMatrix((float*)&worldViewProjNormalMatrix);
+	}
+	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_pSkullVertexBuffer, &dwStride, &dwOffset);
+	m_pD3d11DeviceContext->IASetIndexBuffer(m_pSkullIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	if (pIsWall)
 	{
