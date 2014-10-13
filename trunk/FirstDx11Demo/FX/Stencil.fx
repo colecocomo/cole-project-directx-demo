@@ -8,6 +8,55 @@ SamplerState sampleWrap
 	addressv = wrap;
 };
 
+BlendState mirrorBlend
+{
+	BlendEnable[0] = TRUE;
+	SrcBlend[0] = SRC_COLOR;
+	DestBlend[0] = DEST_COLOR;
+	BlendOp[0] = ADD;
+	SrcBlendAlpha[0] = ZERO;
+	DestBlendAlpha[0] = ZERO;
+	BlendOpAlpha[0] = ADD;
+	RenderTargetWriteMask[0] = 0;
+};
+
+DepthStencilState mirrorDSS
+{
+	DepthEnable = TRUE;
+	DepthWriteMask = 0;
+	DepthFunc = Less;
+
+	StencilEnable = TRUE;
+	StencilReadMask = 0xff;
+	StencilWriteMask = 0xff;
+
+	FrontFaceStencilFail = Keep;
+	FrontFaceStencilDepthFail = Keep;
+	FrontFaceStencilPass = Replace;
+	FrontFaceStencilFunc = Always;
+
+	//BackFaceStencilFail = Keep;
+	//BackFaceStencilPass = Replace;
+	//BackFaceStencilDepthFail = Keep;
+	//BackFaceStencilFunc = Always;
+};
+
+DepthStencilState reflectDSS
+{
+	DepthEnable = FALSE;
+	DepthWriteMask = Zero;
+	DepthFunc  = Less;
+
+	StencilEnable = TRUE;
+	StencilReadMask = 0xff;
+	StencilWriteMask = 0xff;
+
+	FrontFaceStencilPass = Keep;
+	FrontFaceStencilFail = Keep;
+	FrontFaceStencilDepthFail = Keep;
+	FrontFaceStencilFunc = Equal;
+};
+
 cbuffer constantBuffer : register(b0)
 {
 	matrix worldMatrix;
@@ -76,6 +125,10 @@ float4 PS_Main_Common( PS_Input frag ) : SV_TARGET
 
 		ret = ambient + factor * directionLight + pow(sepcularFactor, 1) * specularLight;
 	}
+	else if(isWall == 3)
+	{
+		ret = float4(1.0f, .0f, .0f, .0f);
+	}
 	else
 	{
 		ret = FloorColorMap.Sample(sampleWrap, frag.tex0);
@@ -90,5 +143,23 @@ technique11 Mirror
 	{
 		SetVertexShader( CompileShader(vs_4_0, VS_Main_Common()) );
 		SetPixelShader( CompileShader(ps_4_0, PS_Main_Common()) );
+		SetBlendState( 0, float4(.0f, .0f, .0f, .0f), 0xffffffff);
+		SetDepthStencilState(0, 0);
+	}
+
+	pass p1
+	{
+		SetVertexShader( CompileShader(vs_4_0, VS_Main_Common()) );
+		SetPixelShader( CompileShader(ps_4_0, PS_Main_Common()) );
+		SetBlendState( mirrorBlend, float4(.0f, .0f, .0f, .0f), 0xffffffff);
+		SetDepthStencilState(mirrorDSS, 255);
+	}
+
+	pass p2
+	{
+		SetVertexShader( CompileShader(vs_4_0, VS_Main_Common()) );
+		SetPixelShader( CompileShader(ps_4_0, PS_Main_Common()) );
+		SetBlendState( 0, float4(.0f, .0f, .0f, .0f), 0xffffffff);
+		SetDepthStencilState(reflectDSS, 0);
 	}
 };

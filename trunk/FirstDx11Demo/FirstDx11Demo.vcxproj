@@ -109,6 +109,7 @@
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">fxc /Fc /Od /Zi /T fx_5_0 "%(RelativeDir)\%(Filename).fx" /Fo "%(RelativeDir)\%(Filename).fxo"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">fxc /T fx_5_0 /Fo "%(RelativeDir)\%(Filename).fxo" "%(FullPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(RelativeDir)\%(Filename).fxo</Outputs>
     </CustomBuild>
     <None Include="ReadMe.txt" />
     <None Include="small.ico" />
