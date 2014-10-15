@@ -87,6 +87,7 @@ m_pMirrorEffect(0)
 	m_vObjModelVertexBuff.clear();
 	m_eyePos = XMFLOAT3(.0f, .0f, -1.0f);
 	m_localTranslation = XMMatrixIdentity();
+	m_localRotation = XMMatrixIdentity();
 }
 
 
@@ -1895,7 +1896,7 @@ void CD3dDisplay::DrawObjModel()
 	viewMatrix = XMMatrixLookAtLH(eyePos, lookAtPos, XMVectorSet(.0f, 1.0f, .0f, 1.0f));
 	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
 	projMatrix = XMMatrixTranspose(projMatrix);
-	worldMatrix = m_localTranslation;//XMMatrixRotationRollPitchYaw(.0f, .7f+3.14*0.1*m_dwElapseTime*0.001, .0f);
+	worldMatrix = m_localRotation;//XMMatrixRotationRollPitchYaw(.0f, .7f+3.14*0.1*m_dwElapseTime*0.001, .0f);
 	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, -2.0f, 20.0f));
 	worldMatrix = XMMatrixTranspose(worldMatrix);
 
@@ -2031,8 +2032,14 @@ XMFLOAT3 CD3dDisplay::GetEyePos()
 
 void CD3dDisplay::SetLocalTranslation( float x, float y, float z )
 {
-	XMMATRIX localTrans = XMMatrixRotationRollPitchYaw(x * .01f, y * .01f, z * .01f);
+	XMMATRIX localTrans = XMMatrixTranslation(x * .01f, y * .01f, z * .01f);
 	m_localTranslation = XMMatrixMultiply(m_localTranslation, localTrans);
+}
+
+void CD3dDisplay::SetLocalRotation( float x, float y, float z )
+{
+	XMMATRIX localTrans = XMMatrixRotationRollPitchYaw(x * .01f, y * .01f, z * .01f);
+	m_localRotation = XMMatrixMultiply(m_localRotation, localTrans);
 }
 
 void CD3dDisplay::GenerateWaterMesh(unsigned int dwWidth, unsigned int dwHeight)
@@ -2418,7 +2425,7 @@ void CD3dDisplay::DrawGeometry()
 	viewMatrix = XMMatrixIdentity();
 	viewMatrix = XMMatrixLookAtLH(eyePos, lookPos, upDir);
 	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
-	worldMatrix = m_localTranslation;
+	worldMatrix = m_localRotation;
 	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, .0f, .0f));
 
 	worldViewProjNormalMatrix = XMMatrixMultiply(worldMatrix, viewMatrix);
@@ -2966,16 +2973,17 @@ void CD3dDisplay::DrawMirror()
 		goto error;
 	}
 
-	m_eyePos = XMFLOAT3(70.0f, 70.0f, 10.0f);
+	m_eyePos = XMFLOAT3(70.0f, 70.0f, 50.0f);
 	FXMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, .0f);
 	FXMVECTOR lookPos = XMVectorSet(.0f, .0f, .0f, .0f);
 	FXMVECTOR upDir = XMVectorSet(.0f, 1.0f, .0f, .0f);
 
 	viewMatrix = XMMatrixIdentity();
 	viewMatrix = XMMatrixLookAtLH(eyePos, lookPos, upDir);
+	viewMatrix *= m_localRotation;
 	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
-	worldMatrix = m_localTranslation;
-	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, .0f, .0f));
+	//worldMatrix = m_localRotation;
+	worldMatrix = XMMatrixTranslation(0.0f, .0f, .0f);//XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, .0f, .0f));
 
 	//worldViewProjNormalMatrix = XMMatrixMultiply(worldMatrix, viewMatrix);
 	XMVECTOR determinant = XMMatrixDeterminant(worldMatrix);
@@ -3097,9 +3105,9 @@ void CD3dDisplay::DrawMirror()
 	//draw skull
 	// VertexFmtWithNormal same as GeometryVertexFmt
 #define SKULL_SCALE 2
-	worldMatrix = m_localTranslation;
-	worldMatrix = worldMatrix * XMMatrixScaling(SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f);
-	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(20.0f, 20.0f, 20.0f));
+	//worldMatrix = m_localRotation;
+	worldMatrix = XMMatrixScaling(SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f)/* * worldMatrix*/;
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(30.0f, 20.0f, 20.0f));
 
 	determinant = XMMatrixDeterminant(worldMatrix);
 	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldMatrix);
@@ -3134,8 +3142,8 @@ void CD3dDisplay::DrawMirror()
 		goto error;
 	}
 
-	worldMatrix = m_localTranslation;
-	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, .0f, .0f));
+	//worldMatrix = m_localRotation;
+	worldMatrix = XMMatrixTranslation(10.0f, .0f, .0f);// XMMatrixMultiply(worldMatrix, XMMatrixTranslation(10.0f, .0f, .0f));
 	determinant = XMMatrixDeterminant(worldMatrix);
 	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldMatrix);
 	worldViewProjNormalMatrix = XMMatrixTranspose(worldViewProjNormalMatrix);
@@ -3167,9 +3175,8 @@ void CD3dDisplay::DrawMirror()
 		goto error;
 	}
 
-	worldMatrix = m_localTranslation;
-	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(0.0f, .0f, .0f));
-	worldMatrix *= XMMatrixScaling(SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f);
+	worldMatrix = XMMatrixScaling(SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f)/* * worldMatrix*/;
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(30.0f, 20.0f, 20.0f));
 	XMVECTOR mirrorPlane = XMVectorSet(.0f, .0f, .1f, .0f);
 	worldMatrix *= XMMatrixReflect(mirrorPlane);
 	determinant = XMMatrixDeterminant(worldMatrix);
@@ -3196,6 +3203,39 @@ void CD3dDisplay::DrawMirror()
 
 	pEffectPass->Apply(0, m_pD3d11DeviceContext);
 	m_pD3d11DeviceContext->DrawIndexed(3*m_dwSkullIndexCnt, 0, 0);
+
+	//draw the mirror plane
+	pEffectPass = pEffectTechnique->GetPassByName("p3");
+	if (NULL == pEffectPass)
+	{
+		goto error;
+	}
+
+	//worldMatrix = m_localRotation;
+	worldMatrix = XMMatrixTranslation(10.0f, .0f, .0f);// XMMatrixMultiply(worldMatrix, XMMatrixTranslation(10.0f, .0f, .0f));
+	determinant = XMMatrixDeterminant(worldMatrix);
+	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldMatrix);
+	worldViewProjNormalMatrix = XMMatrixTranspose(worldViewProjNormalMatrix);
+
+	if (pWorldMatrix)
+	{
+		pWorldMatrix->SetMatrix((float*)&worldMatrix);
+	}
+
+	if (pWorldViewProjNormalMatrix)
+	{
+		pWorldViewProjNormalMatrix->SetMatrix((float*)&worldViewProjNormalMatrix);
+	}
+
+	if (pIsWall)
+	{
+		pIsWall->SetInt(3);
+	}
+	m_pD3d11DeviceContext->IASetVertexBuffers(0, 1, &m_pMirrorVertexBuffer, &dwStride, &dwOffset);
+	m_pD3d11DeviceContext->IASetIndexBuffer(m_pMirrorIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	m_pD3d11DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	pEffectPass->Apply(0, m_pD3d11DeviceContext);
+	m_pD3d11DeviceContext->DrawIndexed(m_dwMirrorIndexCnt, 0, 0);
 
 	m_pDXGISwapChain->Present(0, 0);
 
