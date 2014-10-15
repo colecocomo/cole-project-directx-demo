@@ -215,6 +215,35 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}
 		break;
+	case WM_CHAR:
+		{
+			switch (wParam)
+			{
+			case 'w':
+				{
+					
+				}
+				break;
+			case 's':
+				{
+
+				}
+				break;
+			case 'a':
+				{
+
+				}
+				break;
+			case 'd':
+				{
+
+				}
+				break;
+			default:
+				break;
+			}
+		}
+		break;
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}

@@ -39,6 +39,7 @@ public:
 	XMFLOAT3 GetEyePos();
 
 	void SetLocalTranslation(float x, float y, float z);
+	void SetLocalRotation(float x, float y, float z);
 
 	void GenerateGeometry(unsigned int dwWidth, unsigned int dwHeight);
 	void GenerateWaterMesh(unsigned int dwWidth, unsigned int dwHeight);
@@ -93,6 +94,7 @@ private:
 
 	XMFLOAT3					m_eyePos;
 	XMMATRIX					m_localTranslation;
+	XMMATRIX					m_localRotation;
 
 	// geometry
 	ID3D11Buffer*				m_pGeometryVertexBuffer;

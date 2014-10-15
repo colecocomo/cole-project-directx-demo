@@ -20,6 +20,18 @@ BlendState mirrorBlend
 	RenderTargetWriteMask[0] = 0;
 };
 
+BlendState skullBlend
+{
+	BlendEnable[0] = TRUE;
+	SrcBlend[0] = DEST_ALPHA;
+	DestBlend[0] = INV_DEST_ALPHA;
+	BlendOp[0] = Add;
+	SrcBlendAlpha[0] = DEST_ALPHA;
+	DestBlendAlpha[0] = INV_DEST_ALPHA;
+	BlendOpAlpha[0] = Add;
+	RenderTargetWriteMask[0] = 0x0f;
+};
+
 DepthStencilState mirrorDSS
 {
 	DepthEnable = TRUE;
@@ -127,7 +139,7 @@ float4 PS_Main_Common( PS_Input frag ) : SV_TARGET
 	}
 	else if(isWall == 3)
 	{
-		ret = float4(1.0f, .0f, .0f, .0f);
+		ret = float4(1.0f, .0f, .0f, .5f);
 	}
 	else
 	{
@@ -160,6 +172,15 @@ technique11 Mirror
 		SetVertexShader( CompileShader(vs_4_0, VS_Main_Common()) );
 		SetPixelShader( CompileShader(ps_4_0, PS_Main_Common()) );
 		SetBlendState( 0, float4(.0f, .0f, .0f, .0f), 0xffffffff);
-		SetDepthStencilState(reflectDSS, 0);
+		SetDepthStencilState(reflectDSS, 255);
+		//SetDepthStencilState(0, 0);
+	}
+
+	pass p3
+	{
+		SetVertexShader( CompileShader(vs_4_0, VS_Main_Common()) );
+		SetPixelShader( CompileShader(ps_4_0, PS_Main_Common()) );
+		SetBlendState( skullBlend, float4(.0f, .0f, .0f, .0f), 0xffffffff);
+		SetDepthStencilState(0, 0);
 	}
 };
