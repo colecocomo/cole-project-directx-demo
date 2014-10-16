@@ -8,6 +8,20 @@ SamplerState sampleWrap
 	addressv = wrap;
 };
 
+RasterizerState normalRaster
+{
+	FillMode = Solid;
+	CullMode = Back;
+	FrontCounterClockwise = FALSE;
+};
+
+RasterizerState reflectRaster
+{
+	FillMode = Solid;
+	CullMode = Back;
+	FrontCounterClockwise = TRUE;
+};
+
 BlendState mirrorBlend
 {
 	BlendEnable[0] = TRUE;
@@ -157,6 +171,7 @@ technique11 Mirror
 		SetPixelShader( CompileShader(ps_4_0, PS_Main_Common()) );
 		SetBlendState( 0, float4(.0f, .0f, .0f, .0f), 0xffffffff);
 		SetDepthStencilState(0, 0);
+		SetRasterizerState(normalRaster);
 	}
 
 	pass p1
@@ -165,6 +180,7 @@ technique11 Mirror
 		SetPixelShader( CompileShader(ps_4_0, PS_Main_Common()) );
 		SetBlendState( mirrorBlend, float4(.0f, .0f, .0f, .0f), 0xffffffff);
 		SetDepthStencilState(mirrorDSS, 255);
+		SetRasterizerState(normalRaster);
 	}
 
 	pass p2
@@ -174,6 +190,7 @@ technique11 Mirror
 		SetBlendState( 0, float4(.0f, .0f, .0f, .0f), 0xffffffff);
 		SetDepthStencilState(reflectDSS, 255);
 		//SetDepthStencilState(0, 0);
+		SetRasterizerState(reflectRaster);
 	}
 
 	pass p3
@@ -182,5 +199,6 @@ technique11 Mirror
 		SetPixelShader( CompileShader(ps_4_0, PS_Main_Common()) );
 		SetBlendState( skullBlend, float4(.0f, .0f, .0f, .0f), 0xffffffff);
 		SetDepthStencilState(0, 0);
+		SetRasterizerState(normalRaster);
 	}
 };

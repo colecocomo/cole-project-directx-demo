@@ -194,11 +194,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				int disY = abs((float)nY - (float)nOldY);
 				if (disX > disY)
 				{
-					g_D3dDisplay.SetLocalTranslation(.0f, (float)(nX - nOldX), .0f);
+					g_D3dDisplay.SetLocalRotation(.0f, (float)(nX - nOldX), .0f);
 				}
 				else if (disX < disY)
 				{
-					g_D3dDisplay.SetLocalTranslation((float)(nY - nOldY), .0f, .0f);
+					g_D3dDisplay.SetLocalRotation((float)(nY - nOldY), .0f, .0f);
 				}
 			}
 			nOldX = nX;
@@ -221,22 +221,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 			case 'w':
 				{
-					
+					g_D3dDisplay.SetLocalTranslation(.0f, .0f, -2.0f);
 				}
 				break;
 			case 's':
 				{
-
+					g_D3dDisplay.SetLocalTranslation(.0f, .0f, 2.0f);
 				}
 				break;
 			case 'a':
 				{
-
+					g_D3dDisplay.SetLocalTranslation(-2.0f, .0f, .0f);
 				}
 				break;
 			case 'd':
 				{
-
+					g_D3dDisplay.SetLocalTranslation(2.0f, .0f, .0f);
 				}
 				break;
 			default:
