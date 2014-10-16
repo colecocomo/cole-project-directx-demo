@@ -2032,7 +2032,7 @@ XMFLOAT3 CD3dDisplay::GetEyePos()
 
 void CD3dDisplay::SetLocalTranslation( float x, float y, float z )
 {
-	XMMATRIX localTrans = XMMatrixTranslation(x * .01f, y * .01f, z * .01f);
+	XMMATRIX localTrans = XMMatrixTranslation(x, y, z);
 	m_localTranslation = XMMatrixMultiply(m_localTranslation, localTrans);
 }
 
@@ -2973,13 +2973,16 @@ void CD3dDisplay::DrawMirror()
 		goto error;
 	}
 
-	m_eyePos = XMFLOAT3(70.0f, 70.0f, 50.0f);
-	FXMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, .0f);
+	m_eyePos = XMFLOAT3(30.0f, 30.0f, 60.0f);
+	XMVECTOR eyePos = XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, 1.0);
+	eyePos = XMVector3Transform(eyePos, m_localTranslation);
+	//FXMVECTOR eyePos = XMVectorSet(tmp.x, tmp.y, tmp.z, .0f);
 	FXMVECTOR lookPos = XMVectorSet(.0f, .0f, .0f, .0f);
 	FXMVECTOR upDir = XMVectorSet(.0f, 1.0f, .0f, .0f);
 
 	viewMatrix = XMMatrixIdentity();
 	viewMatrix = XMMatrixLookAtLH(eyePos, lookPos, upDir);
+	//viewMatrix = XMMatrixLookToLH(eyePos, lookPos, upDir);
 	viewMatrix *= m_localRotation;
 	projMatrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_dwWidth/m_dwHeight, 0.01f, 1000.0f);
 	//worldMatrix = m_localRotation;
@@ -3107,7 +3110,7 @@ void CD3dDisplay::DrawMirror()
 #define SKULL_SCALE 2
 	//worldMatrix = m_localRotation;
 	worldMatrix = XMMatrixScaling(SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f)/* * worldMatrix*/;
-	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(30.0f, 20.0f, 20.0f));
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(30.0f, 10.0f, 20.0f));
 
 	determinant = XMMatrixDeterminant(worldMatrix);
 	worldViewProjNormalMatrix = XMMatrixInverse(&determinant, worldMatrix);
@@ -3176,7 +3179,7 @@ void CD3dDisplay::DrawMirror()
 	}
 
 	worldMatrix = XMMatrixScaling(SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f, SKULL_SCALE * 1.0f)/* * worldMatrix*/;
-	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(30.0f, 20.0f, 20.0f));
+	worldMatrix = XMMatrixMultiply(worldMatrix, XMMatrixTranslation(30.0f, 10.0f, 20.0f));
 	XMVECTOR mirrorPlane = XMVectorSet(.0f, .0f, .1f, .0f);
 	worldMatrix *= XMMatrixReflect(mirrorPlane);
 	determinant = XMMatrixDeterminant(worldMatrix);
